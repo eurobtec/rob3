@@ -1,9 +1,9 @@
 # ROB3 ROS 2 driver
 
-A ROS 2 driver for the **Eurobtec ROB 3** 6-axis robot, talking to the robot's
-Intel 8031 controller over its **RS-232** serial link — structured after the
-Universal Robots ROS 2 driver (a serial protocol client + a hardware/driver node
-+ URDF/launch/config), but in **Python**.
+A ROS 2 **Lyrical** driver for the **Eurobtec ROB 3** 6-axis robot, talking to
+the robot's Intel 8031 controller over its **RS-232** serial link. It is
+implemented in Python and provides a protocol client, ROS 2 driver node, robot
+description, launch configuration, and controller configuration.
 
 The wire protocol is the ROB3 low-level protocol, reverse-engineered and
 verified against the ROM/simulator (see `../hardware/host/command.md` and
@@ -30,15 +30,34 @@ ros2/rob3_driver/
 └── test/                     # pytest unit tests (protocol codec, calibration)
 ```
 
-## Concept (UR-driver parallel)
+## Architecture
 
-| Universal Robots ROS 2 driver | ROB3 ROS 2 driver |
-| :---------------------------- | :---------------- |
-| Ethernet to the UR control box (RTDE / URScript) | RS-232 to the 8031 controller (ROB3 low-level protocol) |
-| `ur_robot_driver` hardware interface | `rob3_interface` client + `rob3_driver_node` |
-| Dashboard services (power on/off, e-stop) | services: `enable_motors`, `disable_motors`, `estop`, `read_serial_number` |
-| `scaled_joint_trajectory_controller` | `FollowJointTrajectory` action → per-axis position commands |
-| `/joint_states` from RTDE | `/joint_states` polled via the all-axis query (`0x4F`) |
+| Component | Responsibility |
+| :-------- | :-------------- |
+| `protocol.py` | Encode ROB3 commands and decode controller replies |
+| `transport.py` | Communicate over serial hardware or the ucSim TCP socket |
+| `rob3_interface.py` | Provide a high-level client for the ROB3 protocol |
+| `rob3_driver_node.py` | Publish joint states and provide trajectory/action services |
+| `launch/`, `config/`, `urdf/` | Describe and configure the ROB3 ROS 2 system |
+
+## Build with Docker
+
+Run these commands from the repository root. The ROS 2 Lyrical desktop image
+provides the ROS environment and `colcon`:
+
+```bash
+docker pull osrf/ros:lyrical-desktop
+
+docker run --rm \
+  --user "$(id -u):$(id -g)" \
+  -v "$PWD:/home/ubuntu" \
+  -w /home/ubuntu \
+  osrf/ros:lyrical-desktop \
+  bash -lc 'source /opt/ros/lyrical/setup.bash && colcon build --base-paths ros2'
+```
+
+The build artifacts are written to `build/`, `install/`, and `log/` in the
+repository root.
 
 ## Quickstart (against the simulator)
 

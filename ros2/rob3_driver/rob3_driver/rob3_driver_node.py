@@ -1,11 +1,11 @@
 """ROB3 ROS 2 driver node (Python).
 
-UR-driver-equivalent responsibilities, over RS-232:
+Responsibilities over RS-232:
   * publish /joint_states (polled via the all-axis position query 0x4F)
   * a FollowJointTrajectory action server (execute a joint trajectory by
-    streaming per-point position setpoints, like the UR joint-trajectory ctrl)
-  * dashboard-style services: enable_motors, disable_motors, estop,
-    read_serial_number  (std_srvs/Trigger)
+        streaming per-point position setpoints)
+    * services: enable_motors, disable_motors, estop,
+        read_serial_number  (std_srvs/Trigger)
 
 Parameters:
   transport   : 'serial' | 'tcp'                 (default 'tcp')
@@ -108,7 +108,7 @@ class Rob3DriverNode(Node):
             return self._connected
         except Exception as e:  # transport open / serial import failure
             self._connected = False
-            self.get_logger().warn(f"could not connect to ROB3: {e}")
+            self.get_logger().warning(f"could not connect to ROB3: {e}")
             return False
 
     def _ensure(self) -> bool:
@@ -121,7 +121,7 @@ class Rob3DriverNode(Node):
         try:
             counts = self.client.read_all_positions()
         except Exception as e:
-            self.get_logger().warn(f"position read failed: {e}")
+            self.get_logger().warning(f"position read failed: {e}")
             self._connected = False
             return None
         if counts:
@@ -171,7 +171,7 @@ class Rob3DriverNode(Node):
     def _on_goal(self, goal_request):
         names = list(goal_request.trajectory.joint_names)
         if not set(names).issubset(set(self.joint_names)):
-            self.get_logger().warn(f"trajectory joints {names} not a subset of {self.joint_names}")
+            self.get_logger().warning(f"trajectory joints {names} not a subset of {self.joint_names}")
             return GoalResponse.REJECT
         return GoalResponse.ACCEPT
 

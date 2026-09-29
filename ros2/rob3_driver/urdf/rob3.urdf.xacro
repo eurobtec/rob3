@@ -13,16 +13,16 @@
   <material name="rob3_grey"><color rgba="0.6 0.6 0.62 1"/></material>
   <material name="rob3_blue"><color rgba="0.15 0.35 0.7 1"/></material>
 
-  <xacro:macro name="cyl_link" params="name len radius material">
+  <xacro:macro name="cyl_link" params="name segment_length radius material">
     <link name="${name}">
       <visual>
-        <origin xyz="0 0 ${len/2}" rpy="0 0 0"/>
-        <geometry><cylinder length="${len}" radius="${radius}"/></geometry>
+        <origin xyz="0 0 ${segment_length/2}" rpy="0 0 0"/>
+        <geometry><cylinder length="${segment_length}" radius="${radius}"/></geometry>
         <material name="${material}"/>
       </visual>
       <collision>
-        <origin xyz="0 0 ${len/2}" rpy="0 0 0"/>
-        <geometry><cylinder length="${len}" radius="${radius}"/></geometry>
+        <origin xyz="0 0 ${segment_length/2}" rpy="0 0 0"/>
+        <geometry><cylinder length="${segment_length}" radius="${radius}"/></geometry>
       </collision>
       <inertial>
         <mass value="0.2"/>
@@ -38,11 +38,11 @@
     </visual>
   </link>
 
-  <xacro:cyl_link name="link1" len="0.10" radius="0.03" material="rob3_blue"/>
-  <xacro:cyl_link name="link2" len="0.12" radius="0.025" material="rob3_grey"/>
-  <xacro:cyl_link name="link3" len="0.10" radius="0.022" material="rob3_blue"/>
-  <xacro:cyl_link name="link4" len="0.06" radius="0.02"  material="rob3_grey"/>
-  <xacro:cyl_link name="link5" len="0.04" radius="0.018" material="rob3_blue"/>
+  <xacro:cyl_link name="link1" segment_length="0.10" radius="0.03" material="rob3_blue"/>
+  <xacro:cyl_link name="link2" segment_length="0.12" radius="0.025" material="rob3_grey"/>
+  <xacro:cyl_link name="link3" segment_length="0.10" radius="0.022" material="rob3_blue"/>
+  <xacro:cyl_link name="link4" segment_length="0.06" radius="0.02"  material="rob3_grey"/>
+  <xacro:cyl_link name="link5" segment_length="0.04" radius="0.018" material="rob3_blue"/>
   <link name="gripper_link">
     <visual><geometry><box size="0.03 0.05 0.03"/></geometry><material name="rob3_grey"/></visual>
   </link>

@@ -9,8 +9,10 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -26,6 +28,8 @@ def generate_launch_description():
         DeclareLaunchArgument("port", default_value="54321"),
         DeclareLaunchArgument("publish_rate", default_value="10.0"),
         DeclareLaunchArgument("joint_prefix", default_value=""),
+        DeclareLaunchArgument("rviz", default_value="false",
+                      description="Start RViz2"),
     ]
 
     urdf = Command([
@@ -37,7 +41,7 @@ def generate_launch_description():
         package="robot_state_publisher",
         executable="robot_state_publisher",
         output="screen",
-        parameters=[{"robot_description": urdf}],
+        parameters=[{"robot_description": ParameterValue(urdf, value_type=str)}],
     )
 
     driver = Node(
@@ -56,4 +60,15 @@ def generate_launch_description():
         }],
     )
 
-    return LaunchDescription(args + [robot_state_publisher, driver])
+    rviz = Node(
+        package="rviz2",
+        executable="rviz2",
+        name="rviz2",
+        arguments=["-d", PathJoinSubstitution(
+            [FindPackageShare(pkg), "config", "rob3.rviz"]
+        )],
+        condition=IfCondition(LaunchConfiguration("rviz")),
+        output="screen",
+    )
+
+    return LaunchDescription(args + [robot_state_publisher, driver, rviz])

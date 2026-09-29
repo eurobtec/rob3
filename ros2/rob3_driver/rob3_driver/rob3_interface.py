@@ -1,8 +1,8 @@
-"""High-level ROB3 client: protocol codec + a transport = a usable robot API.
+"""High-level ROB3 client combining the protocol codec and transport.
 
-No ROS dependencies — this is the reusable "libur"-equivalent client. The ROS
-node wraps it. Thread-safety: guard calls with the provided lock if sharing one
-instance across threads (the driver node does).
+No ROS dependencies. The ROS node wraps this reusable client. Thread-safety:
+guard calls with the provided lock if sharing one instance across threads (the
+driver node does).
 """
 from __future__ import annotations
 
