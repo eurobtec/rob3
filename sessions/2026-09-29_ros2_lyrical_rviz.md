@@ -13,6 +13,9 @@ visualization step without ucSim.
 - Added a Docker-based `colcon build --base-paths ros2` command to the README.
 - Added an opt-in `rviz:=true` node to `rob3.launch.py`, an RViz preset for the
   ROB3 model, and package installation/dependency metadata for that preset.
+- Added `driver:=false` visualization mode, which starts
+  `joint_state_publisher` instead of opening the ROB3 transport, and documented
+  the full interactive Docker/Xvfb/noVNC startup sequence in the driver README.
 - Fixed Lyrical launch compatibility: typed `robot_description` as a string,
   renamed the xacro macro parameter `len` to `segment_length`, and replaced
   rclpy logger `warn()` calls with `warning()`.
@@ -24,6 +27,9 @@ visualization step without ucSim.
 - Expanded the URDF with the Lyrical xacro executable without warnings.
 - Started `rob3.launch.py` with `rviz:=true` and no ucSim. `robot_state_publisher`
   and RViz started; the ROS graph exposed `/robot_description` and TF topics.
+- Started `rob3.launch.py driver:=false rviz:=false`; the visual-only graph
+  exposed `/joint_states`, `/robot_description`, and TF without opening a ROB3
+  connection.
 - Exposed the virtual display through noVNC on port 6080; the local page returned
   HTTP 200.
 - `git diff --check` passed. The host Python environment does not have pytest.

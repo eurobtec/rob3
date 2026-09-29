@@ -59,6 +59,44 @@ docker run --rm \
 The build artifacts are written to `build/`, `install/`, and `log/` in the
 repository root.
 
+## Run RViz in Docker (no simulator)
+
+From the repository root, start a container with a virtual X display and a
+browser-accessible VNC connection. This mode skips the ROB3 transport driver
+and publishes zero joint positions for viewing the URDF:
+
+```bash
+docker run --rm -it --name rob3-rviz -p 6080:6080 \
+  -v "$PWD:/home/ubuntu" -w /home/ubuntu \
+  osrf/ros:lyrical-desktop bash
+```
+
+Then, inside the container, run:
+
+```bash
+set -e
+apt-get update
+apt-get install -y xvfb x11vnc novnc ros-lyrical-xacro \
+  ros-lyrical-robot-state-publisher ros-lyrical-joint-state-publisher
+source /opt/ros/lyrical/setup.bash
+colcon --log-base /tmp/rob3-log build --base-paths ros2 \
+  --build-base /tmp/rob3-build --install-base /tmp/rob3-install
+source /tmp/rob3-install/setup.bash
+xvfb-run -a -s "-screen 0 1400x900x24" bash -lc '
+  export LIBGL_ALWAYS_SOFTWARE=1 QT_X11_NO_MITSHM=1
+  x11vnc -display "$DISPLAY" -forever -shared -nopw \
+    -rfbport 5900 -listen 0.0.0.0 >/tmp/x11vnc.log 2>&1 &
+  websockify --web=/usr/share/novnc 6080 localhost:5900 \
+    >/tmp/websockify.log 2>&1 &
+  exec ros2 launch rob3_driver rob3.launch.py driver:=false rviz:=true
+'
+```
+
+In the Codespaces **Ports** view, open port `6080` in a browser and visit
+`/vnc.html?autoconnect=1&resize=remote`. Exit the container with `exit` or
+Ctrl+C. To connect the driver to ucSim or hardware instead, omit
+`driver:=false` and provide the appropriate transport arguments.
+
 ## Quickstart (against the simulator)
 
 ```bash

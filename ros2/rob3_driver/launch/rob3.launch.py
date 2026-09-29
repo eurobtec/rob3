@@ -9,7 +9,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.conditions import IfCondition
+from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
@@ -28,6 +28,8 @@ def generate_launch_description():
         DeclareLaunchArgument("port", default_value="54321"),
         DeclareLaunchArgument("publish_rate", default_value="10.0"),
         DeclareLaunchArgument("joint_prefix", default_value=""),
+        DeclareLaunchArgument("driver", default_value="true",
+                      description="Start the ROB3 transport driver"),
         DeclareLaunchArgument("rviz", default_value="false",
                       description="Start RViz2"),
     ]
@@ -58,6 +60,15 @@ def generate_launch_description():
             "publish_rate": LaunchConfiguration("publish_rate"),
             "joint_prefix": LaunchConfiguration("joint_prefix"),
         }],
+        condition=IfCondition(LaunchConfiguration("driver")),
+    )
+
+    joint_state_publisher = Node(
+        package="joint_state_publisher",
+        executable="joint_state_publisher",
+        name="joint_state_publisher",
+        condition=UnlessCondition(LaunchConfiguration("driver")),
+        output="screen",
     )
 
     rviz = Node(
@@ -71,4 +82,6 @@ def generate_launch_description():
         output="screen",
     )
 
-    return LaunchDescription(args + [robot_state_publisher, driver, rviz])
+    return LaunchDescription(args + [
+        robot_state_publisher, driver, joint_state_publisher, rviz,
+    ])
