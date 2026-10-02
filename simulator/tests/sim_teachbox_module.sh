@@ -37,11 +37,17 @@ if [[ -z "$UCSIM_51" ]]; then
 fi
 
 # Confirm the module is actually compiled in; if not, skip rather than fail.
+# Confirm the module is actually available; load the runtime cl_hw plugin first.
 # (`info hw` doesn't list element names in this build, but the teachbox command
 #  echoes a confirmation line — use that as the presence probe.)
-if ! printf 'set hardware teachbox 0 1\nquit\n' | "$UCSIM_51" $SIMFLAGS "$SAFEHEX" 2>/dev/null \
+MODDIR="$(cd "$(dirname "$0")/../ucsim-modules" && pwd)"
+TB_SO="$MODDIR/teachbox/teachbox.so"
+LOADHW=""
+[[ -f "$TB_SO" ]] && LOADHW="loadhw \"$TB_SO\"\n"
+
+if ! printf "${LOADHW}set hardware teachbox 0 1\nquit\n" | "$UCSIM_51" $SIMFLAGS "$SAFEHEX" 2>/dev/null \
      | sed 's/\x1b\[0K//g' | grep -qi 'teachbox:'; then
-  echo "SKIP  sim_teachbox_module: ucsim_51 has no 'teachbox' hardware element"
+  echo "SKIP  sim_teachbox_module: ucsim_51 has no 'teachbox' hardware element (and $TB_SO not loadable)"
   echo "sim_teachbox_module: SKIPPED"
   exit 0
 fi
@@ -54,7 +60,7 @@ die()  { echo "FAIL  $1"; fail=1; }
 # the row strobe latch 0x46. The module must have driven the column only on the
 # matching row, so the scanner stops with 0x46 == (row<<4).
 strobe_at_hit() { # row group
-  printf 'set hardware teachbox %s %s\nreset\npc 0x0c00\nset mem iram 0x47 0x00\nset mem iram 0x20 0x00\nbreak 0x0c2a\nrun\ndump iram 0x46 0x46\nquit\n' "$1" "$2" \
+  printf "${LOADHW}set hardware teachbox %s %s\nreset\npc 0x0c00\nset mem iram 0x47 0x00\nset mem iram 0x20 0x00\nbreak 0x0c2a\nrun\ndump iram 0x46 0x46\nquit\n" "$1" "$2" \
     | timeout 15 "$UCSIM_51" $SIMFLAGS "$SAFEHEX" 2>/dev/null | sed 's/\x1b\[0K//g' \
     | awk '/^0x46/{print $2; exit}'
 }
@@ -79,7 +85,7 @@ check_row 3 2 30
 check_row 5 3 50
 
 # Releasing (single-arg) must make the scanner find NO hit (never reaches 0x0C2A).
-rel="$(printf 'set hardware teachbox 2 1\nset hardware teachbox 0\nreset\npc 0x0c00\nset mem iram 0x47 0x00\nset mem iram 0x20 0x00\nset mem iram 0x56 0x00\nbreak 0x0c2a\nstep 400\nquit\n' \
+rel="$(printf "${LOADHW}set hardware teachbox 2 1\nset hardware teachbox 0\nreset\npc 0x0c00\nset mem iram 0x47 0x00\nset mem iram 0x20 0x00\nset mem iram 0x56 0x00\nbreak 0x0c2a\nstep 400\nquit\n" \
   | timeout 15 "$UCSIM_51" $SIMFLAGS "$SAFEHEX" 2>/dev/null | sed 's/\x1b\[0K//g')"
 if grep -Eqi 'Stop at 0x000c2a' <<<"$rel"; then
   die "release: scanner unexpectedly saw a key (reached 0x0C2A)"

@@ -38,10 +38,18 @@ if [[ -z "$UCSIM_51" ]]; then
   exit 0
 fi
 
-# Confirm the module is compiled in; the adc command echoes a state line.
-if ! printf 'set hardware adc\nquit\n' | "$UCSIM_51" $SIMFLAGS "$SAFEHEX" 2>/dev/null \
+# The adc peripheral is a runtime cl_hw plugin (loadhw). Locate the .so next to
+# the test tree and load it at the top of every script. (Older builds compiled
+# it in; a loadhw of an already-present module is harmless.)
+MODDIR="$(cd "$(dirname "$0")/../ucsim-modules" && pwd)"
+ADC_SO="$MODDIR/adc/adc.so"
+LOADHW=""
+[[ -f "$ADC_SO" ]] && LOADHW="loadhw \"$ADC_SO\"\n"
+
+# Confirm the module is available; the adc command echoes a state line.
+if ! printf "${LOADHW}set hardware adc\nquit\n" | "$UCSIM_51" $SIMFLAGS "$SAFEHEX" 2>/dev/null \
      | sed 's/\x1b\[0K//g' | grep -qi 'adc\['; then
-  echo "SKIP  sim_adc: ucsim_51 has no 'adc' hardware element"
+  echo "SKIP  sim_adc: ucsim_51 has no 'adc' hardware element (and $ADC_SO not loadable)"
   echo "sim_adc: SKIPPED"
   exit 0
 fi
@@ -52,7 +60,7 @@ die()  { echo "FAIL  $1"; echo "----- sim output -----"; echo "${OUT:-}"; fail=1
 
 # 1) FREE-RUN: from reset, with only P3.0=0 (fixed-baud) and NO ADC injection,
 #    init must reach the main loop 0x074D because the ADC drives EOC->INT1.
-OUT="$(printf 'reset\nset mem sfr 0xb0 0x00\nbreak 0x074d\nrun 3000000\ndump sfr 0xa8 0xa8\nquit\n' \
+OUT="$(printf "${LOADHW}reset\nset mem sfr 0xb0 0x00\nbreak 0x074d\nrun 3000000\ndump sfr 0xa8 0xa8\nquit\n" \
   | timeout 30 "$UCSIM_51" $SIMFLAGS "$SAFEHEX" 2>&1 | sed 's/\x1b\[0K//g')"
 if grep -Eqi 'Stop at 0x00074d' <<<"$OUT"; then
   pass "free-run reaches main loop 0x074D via ADC EOC->INT1 (no hand-injection)"
@@ -61,7 +69,7 @@ else
 fi
 
 # 2) The axis-servo ISR (0x00C0) actually executes on its own (the EOC target).
-OUT="$(printf 'reset\nset mem sfr 0xb0 0x00\nbreak 0x00c0\nrun 3000000\nquit\n' \
+OUT="$(printf "${LOADHW}reset\nset mem sfr 0xb0 0x00\nbreak 0x00c0\nrun 3000000\nquit\n" \
   | timeout 30 "$UCSIM_51" $SIMFLAGS "$SAFEHEX" 2>&1 | sed 's/\x1b\[0K//g')"
 if grep -Eqi 'Stop at 0x0000c0' <<<"$OUT"; then
   pass "axis-servo ISR (0x00C0) fires from a natural EOC->INT1"
@@ -74,7 +82,7 @@ fi
 #    ADC; breaking right after (0x00D9) the accumulator must equal the seeded
 #    value. Seed all channels so it holds regardless of which channel the
 #    round-robin is servicing when the break hits.
-OUT="$(printf 'reset\nset hardware adc 0 0x5a\nset hardware adc 1 0x5a\nset hardware adc 2 0x5a\nset hardware adc 3 0x5a\nset hardware adc 4 0x5a\nset hardware adc 5 0x5a\nset hardware adc 6 0x5a\nset hardware adc 7 0x5a\nset mem sfr 0xb0 0x00\nbreak 0x00d9\nrun 3000000\ndump sfr 0xe0 0xe0\nquit\n' \
+OUT="$(printf "${LOADHW}reset\nset hardware adc 0 0x5a\nset hardware adc 1 0x5a\nset hardware adc 2 0x5a\nset hardware adc 3 0x5a\nset hardware adc 4 0x5a\nset hardware adc 5 0x5a\nset hardware adc 6 0x5a\nset hardware adc 7 0x5a\nset mem sfr 0xb0 0x00\nbreak 0x00d9\nrun 3000000\ndump sfr 0xe0 0xe0\nquit\n" \
   | timeout 30 "$UCSIM_51" $SIMFLAGS "$SAFEHEX" 2>&1 | sed 's/\x1b\[0K//g')"
 if grep -Eqi '0xe0 ACC:.*0x5a' <<<"$OUT"; then
   pass "seeded ADC feedback (0x5A) flows through the servo-ISR MOVX read (ACC=0x5A)"

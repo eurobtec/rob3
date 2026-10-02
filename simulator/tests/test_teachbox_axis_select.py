@@ -62,16 +62,39 @@ def _tap(eng, row, group, hold=6):
     return dispatched
 
 
+def _load_runtime_modules(eng):
+    """Load the cl_hw plugins as runtime .so's (loadhw) and flip has_modules.
+
+    The modules are built as runtime shared objects under
+    ../ucsim-modules/<name>/<name>.so (not compiled into ucsim_51), so the
+    harness engine — which doesn't loadhw on its own — needs them loaded here.
+    Returns the set of id_strings that loaded successfully.
+    """
+    moddir = os.path.normpath(os.path.join(HERE, "..", "ucsim-modules"))
+    loaded = set()
+    for name in ("loopback", "teachbox", "adc", "rxd"):
+        so = os.path.join(moddir, name, f"{name}.so")
+        if not os.path.isfile(so):
+            continue
+        out = eng.cmd(f'loadhw "{so}"')
+        if "loaded" in out.lower():
+            loaded.add(name)
+    if {"teachbox", "adc"} <= loaded:
+        eng.has_modules = True
+    return loaded
+
+
 def main():
     eng = UCSimEngine()
+    loaded = _load_runtime_modules(eng)
     if not eng.has_modules:
-        print("SKIP  test_teachbox_axis_select: custom ucsim_51 (cl_hw) not found")
+        print("SKIP  test_teachbox_axis_select: teachbox/adc cl_hw plugins not loadable")
         eng.close()
         return 0
-    # Probe that the loopback module is present (else the poll never runs).
-    if "loopback" not in eng.cmd("info hardware loopback").lower():
-        print("SKIP  test_teachbox_axis_select: ucsim_51 lacks the 'loopback' module")
-        print("      rebuild per simulator/ucsim-modules/loopback/README.md")
+    # The loopback module de-asserts the emergency-off gate so the poll runs.
+    if "loopback" not in loaded:
+        print("SKIP  test_teachbox_axis_select: 'loopback' plugin not loadable")
+        print("      build it per simulator/ucsim-modules/loopback/README.md")
         eng.close()
         return 0
 
