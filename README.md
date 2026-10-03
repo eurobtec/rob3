@@ -27,15 +27,27 @@ What exists in this repository today:
   confirmed against the ROM (hidden digital-input-read commands found), the
   startup handshake (0x15/0xF1 reply semantics), and the stored-program
   interpreter + a "hello world" program, all `[SIM]`-verified.
-- **Python ROS 2 driver** — a UR-driver-style package (ROS-independent protocol
-  codec, serial transport, calibration, and a driver node: JointState /
-  FollowJointTrajectory / JointJog teleop / Trigger services). Driver bytes
-  verified against the ROM dispatch in ucSim. **Now in its own repository:**
+- **Python protocol library** — the ROB3 RS-232 low-level protocol as a
+  ROS-independent, pip-installable package (wire-protocol codec, serial
+  transport, joint↔count calibration, a high-level `Rob3Client`, a byte-level
+  fake robot, and a `rob3-teleop` example). Bytes verified against the ROM in
+  ucSim. **Its own repository:**
+  [eurobtec/rob3_py](https://github.com/eurobtec/rob3_py).
+- **Python ROS 2 driver** — a UR-driver-style package built on `rob3_py`
+  (JointState / FollowJointTrajectory / JointJog teleop / Trigger services,
+  URDF/launch, Docker + RViz). Verified end-to-end against the ROM in ucSim.
+  **Its own repository:**
   [eurobtec/rob3_ros2_driver](https://github.com/eurobtec/rob3_ros2_driver)
   (see `simulator/USING_UCSIM_MCP.md` for how it ties back to this firmware).
 - **Hardware reference docs** for every board IC, plus compiled **ucSim
   peripheral modules** (`cl_hw`: teachbox, adc, loopback, rxd) for
   closer-to-real simulation — including a pin-level auto-baud driver.
+- **Python simulation harness** — the ROB3-aware ucSim driver (`UCSimEngine` +
+  firmware landmarks, `Plant` motor/pot model) that drives *this* ROM and reads
+  back its state, built on the generic [pyucsim](https://github.com/eurobtec/pyucsim)
+  client. **Its own repository:**
+  [eurobtec/rob3_ucsim](https://github.com/eurobtec/rob3_ucsim) (the behavioral
+  `simulator/tests/` and the `cl_hw` modules stay here).
 - **Arduino bench bring-up rigs** that recreate the teachbox and a single robot
   axis to confirm hardware claims independently of the 8031.
 - **Domain skills & steering** under `.kiro/` capturing the MCS-51 / ucSim /
@@ -67,8 +79,9 @@ rob3/
 │   ├── Makefile                       #   sim-* targets; verify delegates to firmware/src/annotated
 │   ├── BUILD.md                       #   build/test guide
 │   ├── tests/                          #   ucSim behavioral tests
-│   ├── harness/                        #   Python batch driver + Teachbox GUI/CLI + plant
+│   ├── harness/                        #   Teachbox GUI/CLI (use the external rob3_ucsim pkg)
 │   ├── ucsim-modules/                  #   compiled cl_hw peripherals (teachbox/ adc/ loopback/ rxd/)
+│   #   (the Python harness library moved to eurobtec/rob3_ucsim, built on pyucsim)
 ├── hardware/                         # board reverse-engineering
 │   ├── board/                         #   per-chip docs (8031, 8255, 74LS138, EPROM, SRAM, ADC, L293, ...)
 │   ├── teachbox/  motors/  connectors/#   subsystem docs + Arduino bring-up sketches
