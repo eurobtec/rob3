@@ -88,6 +88,38 @@ file path and let an external driver do a live round-trip. Alternatively, add a
 public "inject one received byte" entry that an input source (or a `cl_hw`
 plugin) can call, clocked by the UART.
 
+## Attempt log (what was tried and why it was NOT enough)
+
+A FIFO was prototyped and **reverted** — recording the dead ends so the next
+attempt starts informed:
+
+1. **Host-side pacing (byte-by-byte with a gap)** — does NOT help. Writing the
+   two frame bytes to the pty with 20–400 ms gaps still produced a corrupted
+   reply (`4f 5e 43`). The pacing authority must be the simulator, not the host.
+
+2. **RX FIFO in `cl_serial_hw`** (push every received byte into a
+   `std::deque` in `proc_not_in_menu`; pop one per frame-time in `get_input`;
+   start receiving in `cl_serial::tick` when the FIFO is non-empty). It compiles
+   and links, but on the live **pty** and **socket** paths the FIFO was **never
+   filled** (debug `fprintf`s in `proc_not_in_menu`/`get_input` never fired)
+   while the sim was free-running from the pty command console. Conclusion: the
+   fix was on the wrong code path.
+
+3. **Open question for the next attempt — the real blocker:** *when, during a
+   free `run`, is a serial input fd (socket/pty) actually polled?*
+   `cl_commander::proc_input` (`core/cmd.src/newcmdposix.cc`) iterates
+   **consoles** and calls `proc_input` only when `input_avail()`; the
+   `-S port=` listener registers as a console, but driving the sim via a
+   *scripted pty command console* (as the harness does) did not pump the serial
+   socket/pty in these tests. The `-S in=<file>` path works because it is read
+   on a different schedule entirely. **Resolve this first** (map the exact
+   run-loop → serial-RX input dispatch) before re-attempting the FIFO; patching
+   `proc_not_in_menu`/`get_input` is pointless if they aren't called during
+   `run`.
+
+Until then the reliable contract remains the pre-staged `-S in=<file>` path
+(`rob3_ros2_driver` `test/test_sim_roundtrip.py`).
+
 ## Impact / current workaround
 
 Not blocking: the driver uses **serial** against the real robot, and the ucSim
