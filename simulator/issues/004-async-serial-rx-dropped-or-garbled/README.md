@@ -1,81 +1,95 @@
-# Issue 004 — Asynchronously-delivered serial RX bytes are dropped/garbled (`-S port=` socket and live `in=` pty)
+# Issue 004 — ucSim serial inter-byte timing exceeds the firmware's RX timeout (no live socket/pty command round-trip)
 
-**Component:** `src/core/sim.src/serial_hw.cc` (`cl_serial_hw`), the serial
-input buffering; and `src/sims/s51.src/serial.cc` (`cl_serial::tick`), the RX
-clocking.
+**Component:** `src/sims/s51.src/serial.cc` (`cl_serial`), the MCS-51 UART
+receive bit-timing — specifically how many machine cycles elapse between
+consecutive received bytes under the `rxd`-driven auto-baud lock.
 **ucSim:** 0.9.9
-**Type:** modeling limitation (frames dropped / corrupted — not a crash)
-**Status:** limitation + repro; worked around by using **pre-staged file input**
-(`-S in=<file>`), which is clocked deterministically. **To investigate later:**
-a FIFO/queued RX path so live sockets/ptys round-trip.
+**Type:** timing-fidelity mismatch (NOT a dropped/garbled-byte bug, NOT a crash)
+**Status:** **ROOT CAUSE FOUND** (below). ucSim is unmodified. The reliable
+contract remains pre-staged `-S in=<file>` (`test_sim_roundtrip.py`).
 
-## ⚠️ CORRECTION (re-investigated) — the original premise above is WRONG
+## ROOT CAUSE (confirmed [SIM] + arithmetic)
 
-A careful re-investigation **overturns** the "ucSim drops/garbles RX bytes"
-diagnosis. The earlier `skip`/garble observations were an **artifact of the test
-harness**, not a ucSim UART defect.
+A live socket/pty command frame (e.g. the all-axis query `0x4F 0x03`) does not
+dispatch — the firmware replies `0xF1` — **because ucSim delivers the two bytes
+~1.84M machine-cycles apart, which is longer than the firmware's 20-tick serial
+RX timeout. The timeout fires between the header and the ETX, resets the RX
+state machine, and stages the `0xF1` reset-ACK; the ETX then arrives as a fresh
+(invalid) "header".**
 
-### What actually happens (instrumented, normal invocation)
+### The bytes are NOT dropped or garbled
 
-Driving ucSim *normally* (`ucsim_51 -S port=N,raw ... -e run`, i.e. NOT through a
-scripted `pty.fork()` command console) and tracing the RX path with `fprintf`s
-in `cl_serial_hw::proc_not_in_menu` and `get_input`:
+Instrumenting the ucSim RX path (`fprintf` in `proc_not_in_menu`, `get_input`,
+and `cl_serial::received`) under a **normal** invocation
+(`ucsim_51 -S port=N,raw ... -e run`, *not* a scripted pty command console):
 
 ```
-DBG rx accept 0x4f           # byte 1 read from the socket, cleanly
-DBG get_input -> SBUF 0x4f   # clocked into SBUF
-DBG rx accept 0x03           # byte 2 (ETX), cleanly
-DBG get_input -> SBUF 0x03   # clocked into SBUF
+DBG RI set for 0x4f (SCON=0x51, RI_was_already=0) tick=46353864
+DBG RI set for 0x03 (SCON=0x51, RI_was_already=0) tick=48192420
 ```
 
-**Both bytes arrive in order and reach SBUF correctly** — no drop, no garble,
-no overrun — *even with a 1.5 s gap between them, and even sent back-to-back in
-one write*. ucSim's UART-over-socket is **fine**.
+Both bytes reach `SBUF` with a clean RI edge (RI was 0 before each — the ISR
+serviced and cleared byte 1 before byte 2). The UART-over-socket is **correct**.
+(The earlier "dropped/garbled" observations were a **test-harness artifact** —
+driving the sim through a scripted pty command console bypassed the normal
+`cl_app::run_go` → `cl_commander::proc_input` input-polling loop, so the socket
+was never pumped. Run ucSim ordinarily and it is.)
 
-The earlier failures were because the tests drove the sim through a captured
-pty **command console** running a scripted `run`; in that mode the normal
-`cl_app::run_go` → `cl_commander::proc_input` → `update_active` input-polling
-loop did not pump the serial socket/pty (the `DBG upd`/`DBG serial_hw::proc_input`
-traces never fired). Run ucSim the ordinary way and the serial fd IS polled and
-delivered.
+### The timing numbers
 
-### The REAL problem is firmware-side, not ucSim
+- Inter-byte gap measured: **48192420 − 46353864 = 1,838,556 machine cycles**
+  (constant, independent of how the host sends — it is the UART model's framing
+  time at the `rxd`-locked baud, ~128 cycles/bit).
+- Firmware serial timeout: Timer 0 reloads `TH0:TL0 = 0xE811` → overflow every
+  `0x10000−0xE811 = 6127` cycles → tick period **6127 × 12 = 73,524** cycles.
+  `main.asm` reloads `SER_TIMEOUT` (IRAM `0x18`) to `0x14` (20) per received
+  byte and does `djnz 0x18` once per serial tick (`0x23.7`). Expiry after
+  **20 × 73,524 = 1,470,480** cycles.
+- **1,470,480 (timeout) < 1,838,556 (inter-byte gap)** → the timeout always
+  expires first.
 
-With both bytes correctly in SBUF, the ROB3 firmware **still** replies `0xF1`
-(idle / "already initialized") instead of dispatching the frame. The startup
-`0x20` also gets `0xF1` rather than `0x15`. So after the `rxd` auto-baud lock,
-received command bytes reach SBUF but the firmware's serial command path does
-**not** engage — it sits in the idle-reply state.
+### The firmware path that fires (`main.asm`, [BYTE])
 
-Ruled out by experiment:
-- single-byte RX-slot overflow (bytes are not dropped);
-- bit-clock misalignment / garble (SBUF values are exact);
-- inter-byte serial-timeout reset (fails identically back-to-back and with gaps);
-- missing startup handshake (sending `0x20` first still yields `0xF1`, not `0x15`).
+```
+ml_no_serial:
+  jnb  0x23.7, ml_poll_gate     ; only on a serial-timer tick
+  clr  0x23.7
+  jnb  0x24.2, ml_poll_gate     ; only if a byte has been seen (RX in progress)
+  djnz 0x18,  ml_poll_gate      ; SER_TIMEOUT--; not expired -> skip
+  anl  0x24, #0xF0              ; EXPIRED: wipe RX frame flags (0x24.0..3)
+  mov  R4,  #0xF1              ; stage 0xF1 reset-ACK
+  setb 0x25.3                  ; arm TX
+```
 
-### Where to look next (firmware, not simulator)
+Confirmed by trace: after the header, `0x24 = 0x07` (frame in progress +
+complete-armed + byte-seen); by the time the ETX arrives the timeout has wiped
+`0x24.0`, so the ISR's `jb 0x24.0, rx_payload` (0x0311) is not taken and ETX is
+mis-decoded as a new header. Breakpoint at `rx_payload` (0x0354) and at
+`rx_dispatch` (0x03A9) are never hit for the ETX.
 
-This is now a **firmware RE question** in `firmware/src/annotated/rs232.asm`:
-why, after the auto-baud path completes (IE=0x17, ES on, TR1 running), do bytes
-clocked into SBUF land on the `0xF1` idle-reply path instead of advancing the
-RX state machine (`0x24` flags) into `rx_dispatch` (0x03A9)? Candidate areas:
-the auto-baud *lock produced by the `rxd` model* may leave the UART in a state
-the firmware treats as not-yet-synchronized; or the `0x20`-handshake state
-(the `0x15` vs `0xF1` decision) gates all later command dispatch and never
-reaches "init OK" under the `rxd`-driven lock. Trace from the RX ISR (0x0300)
-with a PC/flag log and compare against the `-S in=<file>` path that DOES
-dispatch (`test_sim_roundtrip.py`) — the delta between the two is the key.
+### Why the `-S in=<file>` path works
 
-### Net
+It is driven under `step`, so the firmware advances only a bounded number of
+cycles between bytes — fewer than the timeout — and the frame completes. On
+**real hardware** the true baud puts the two bytes well within 1.47M cycles, so
+the timeout never expires. The problem is purely the `rxd` model's cycles/bit
+being far slower than real serial (a modelling artifact already noted in
+issue 003 / lessons-learned: the auto-baud lock lands at ~128 cycles/bit, not a
+real baud).
 
-- **No ucSim change is warranted** for this (the FIFO attempt below was based on
-  the wrong premise and was reverted; ucSim is unmodified).
-- The `-S in=<file>` round-trip works because of *how that path is driven*, not
-  because the socket is broken. The open question is a firmware-state one.
+### Fix options (none applied yet)
+
+1. **Make the `rxd` auto-baud lock land at a realistic bit-time** so the modeled
+   inter-byte gap is < ~1.47M cycles (i.e. drive the training byte so the
+   firmware derives a faster TH1 / the UART clocks bytes faster). Cleanest —
+   keeps the firmware honest, no core change.
+2. Drive command bytes under `step` (as `test_sim_roundtrip.py` does) rather
+   than a free `run`, so few firmware cycles pass between bytes.
+3. (Not recommended) patch the firmware timeout — it is correct for real HW.
 
 ---
 
-## (original, now-superseded) Summary
+## (original, WRONG premise — kept for history) Summary
 
 ucSim's serial RX has a **single-byte** host-input slot (`input` /
 `input_avail` in `cl_serial_hw`). A new byte is only accepted when
