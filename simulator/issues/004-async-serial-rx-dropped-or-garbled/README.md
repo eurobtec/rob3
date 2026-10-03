@@ -9,7 +9,73 @@ clocking.
 (`-S in=<file>`), which is clocked deterministically. **To investigate later:**
 a FIFO/queued RX path so live sockets/ptys round-trip.
 
-## Summary
+## ⚠️ CORRECTION (re-investigated) — the original premise above is WRONG
+
+A careful re-investigation **overturns** the "ucSim drops/garbles RX bytes"
+diagnosis. The earlier `skip`/garble observations were an **artifact of the test
+harness**, not a ucSim UART defect.
+
+### What actually happens (instrumented, normal invocation)
+
+Driving ucSim *normally* (`ucsim_51 -S port=N,raw ... -e run`, i.e. NOT through a
+scripted `pty.fork()` command console) and tracing the RX path with `fprintf`s
+in `cl_serial_hw::proc_not_in_menu` and `get_input`:
+
+```
+DBG rx accept 0x4f           # byte 1 read from the socket, cleanly
+DBG get_input -> SBUF 0x4f   # clocked into SBUF
+DBG rx accept 0x03           # byte 2 (ETX), cleanly
+DBG get_input -> SBUF 0x03   # clocked into SBUF
+```
+
+**Both bytes arrive in order and reach SBUF correctly** — no drop, no garble,
+no overrun — *even with a 1.5 s gap between them, and even sent back-to-back in
+one write*. ucSim's UART-over-socket is **fine**.
+
+The earlier failures were because the tests drove the sim through a captured
+pty **command console** running a scripted `run`; in that mode the normal
+`cl_app::run_go` → `cl_commander::proc_input` → `update_active` input-polling
+loop did not pump the serial socket/pty (the `DBG upd`/`DBG serial_hw::proc_input`
+traces never fired). Run ucSim the ordinary way and the serial fd IS polled and
+delivered.
+
+### The REAL problem is firmware-side, not ucSim
+
+With both bytes correctly in SBUF, the ROB3 firmware **still** replies `0xF1`
+(idle / "already initialized") instead of dispatching the frame. The startup
+`0x20` also gets `0xF1` rather than `0x15`. So after the `rxd` auto-baud lock,
+received command bytes reach SBUF but the firmware's serial command path does
+**not** engage — it sits in the idle-reply state.
+
+Ruled out by experiment:
+- single-byte RX-slot overflow (bytes are not dropped);
+- bit-clock misalignment / garble (SBUF values are exact);
+- inter-byte serial-timeout reset (fails identically back-to-back and with gaps);
+- missing startup handshake (sending `0x20` first still yields `0xF1`, not `0x15`).
+
+### Where to look next (firmware, not simulator)
+
+This is now a **firmware RE question** in `firmware/src/annotated/rs232.asm`:
+why, after the auto-baud path completes (IE=0x17, ES on, TR1 running), do bytes
+clocked into SBUF land on the `0xF1` idle-reply path instead of advancing the
+RX state machine (`0x24` flags) into `rx_dispatch` (0x03A9)? Candidate areas:
+the auto-baud *lock produced by the `rxd` model* may leave the UART in a state
+the firmware treats as not-yet-synchronized; or the `0x20`-handshake state
+(the `0x15` vs `0xF1` decision) gates all later command dispatch and never
+reaches "init OK" under the `rxd`-driven lock. Trace from the RX ISR (0x0300)
+with a PC/flag log and compare against the `-S in=<file>` path that DOES
+dispatch (`test_sim_roundtrip.py`) — the delta between the two is the key.
+
+### Net
+
+- **No ucSim change is warranted** for this (the FIFO attempt below was based on
+  the wrong premise and was reverted; ucSim is unmodified).
+- The `-S in=<file>` round-trip works because of *how that path is driven*, not
+  because the socket is broken. The open question is a firmware-state one.
+
+---
+
+## (original, now-superseded) Summary
 
 ucSim's serial RX has a **single-byte** host-input slot (`input` /
 `input_avail` in `cl_serial_hw`). A new byte is only accepted when
