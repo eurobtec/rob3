@@ -1,21 +1,24 @@
-# Issue 004 — ucSim serial inter-byte timing exceeds the firmware's RX timeout (no live socket/pty command round-trip)
+# Issue 004 — ucSim polls the serial fd too rarely during `run`; the gap exceeds the firmware's RX timeout (no live socket/pty command round-trip)
 
-**Component:** `src/sims/s51.src/serial.cc` (`cl_serial`), the MCS-51 UART
-receive bit-timing — specifically how many machine cycles elapse between
-consecutive received bytes under the `rxd`-driven auto-baud lock.
+**Component:** `src/core/utils.src/app.cc` (`cl_app::run_go`) — the run-loop
+cadence at which `cl_commander::proc_input` is called to read the serial input
+fd. (NOT the UART bit-timing in `serial.cc`, and NOT the single-byte RX slot in
+`serial_hw.cc` — both are fine.)
 **ucSim:** 0.9.9
-**Type:** timing-fidelity mismatch (NOT a dropped/garbled-byte bug, NOT a crash)
+**Type:** host-input poll-cadence vs. firmware-timeout mismatch (NOT a
+dropped/garbled-byte bug, NOT a crash)
 **Status:** **ROOT CAUSE FOUND** (below). ucSim is unmodified. The reliable
 contract remains pre-staged `-S in=<file>` (`test_sim_roundtrip.py`).
 
 ## ROOT CAUSE (confirmed [SIM] + arithmetic)
 
 A live socket/pty command frame (e.g. the all-axis query `0x4F 0x03`) does not
-dispatch — the firmware replies `0xF1` — **because ucSim delivers the two bytes
-~1.84M machine-cycles apart, which is longer than the firmware's 20-tick serial
-RX timeout. The timeout fires between the header and the ETX, resets the RX
-state machine, and stages the `0xF1` reset-ACK; the ETX then arrives as a fresh
-(invalid) "header".**
+dispatch — the firmware replies `0xF1` — **because ucSim reads the two bytes
+from the serial fd ~1.84M machine-cycles apart (it polls the fd only rarely
+during a free `run`), which is longer than the firmware's 20-tick (~1.47M-cycle)
+serial RX timeout. The timeout fires between the header and the ETX, resets the
+RX state machine, and stages the `0xF1` reset-ACK; the ETX then arrives after
+the frame flags are cleared and is mis-decoded as a fresh (invalid) "header".**
 
 ### The bytes are NOT dropped or garbled
 
@@ -37,16 +40,27 @@ was never pumped. Run ucSim ordinarily and it is.)
 
 ### The timing numbers
 
-- Inter-byte gap measured: **48192420 − 46353864 = 1,838,556 machine cycles**
-  (constant, independent of how the host sends — it is the UART model's framing
-  time at the `rxd`-locked baud, ~128 cycles/bit).
+- Inter-byte gap measured: **~1,838,500 machine cycles** between the two bytes
+  reaching SBUF (consistent across runs; e.g. 48192420 − 46353864 = 1,838,556).
+- **This gap is NOT the UART baud timing.** The firmware's detected baud (after
+  the `rxd` lock) is mode-1 with Timer-1 mode-2, TH1=0xFC → Timer-1 overflows
+  every `(256−252)×12 = 48` cycles; mode-1 RX = 32 overflows/bit × 10 bits =
+  **~15,360 cycles per byte**. So the UART, once a byte is in its one-byte input
+  slot, clocks it to SBUF in ~15K cycles — 120× faster than the measured gap.
+- **The gap is the host-fd POLL cadence.** Tracing `cl_serial_hw::proc_input`
+  (the only place the socket fd is read) shows it is called only ~3 times for
+  the whole exchange, and the two command bytes are *read from the socket*
+  1,838,484 cycles apart — with the input slot FREE (`avail=0`) both times. So
+  neither the UART nor the single-byte slot is the limiter: **ucSim simply polls
+  the serial fd that rarely during a free `run`.** The byte sits in the OS
+  socket buffer until the next poll.
 - Firmware serial timeout: Timer 0 reloads `TH0:TL0 = 0xE811` → overflow every
   `0x10000−0xE811 = 6127` cycles → tick period **6127 × 12 = 73,524** cycles.
   `main.asm` reloads `SER_TIMEOUT` (IRAM `0x18`) to `0x14` (20) per received
   byte and does `djnz 0x18` once per serial tick (`0x23.7`). Expiry after
   **20 × 73,524 = 1,470,480** cycles.
-- **1,470,480 (timeout) < 1,838,556 (inter-byte gap)** → the timeout always
-  expires first.
+- **1,470,480 (timeout) < 1,838,484 (fd-poll gap)** → the timeout always
+  expires between the two polled bytes.
 
 ### The firmware path that fires (`main.asm`, [BYTE])
 
@@ -72,19 +86,22 @@ mis-decoded as a new header. Breakpoint at `rx_payload` (0x0354) and at
 It is driven under `step`, so the firmware advances only a bounded number of
 cycles between bytes — fewer than the timeout — and the frame completes. On
 **real hardware** the true baud puts the two bytes well within 1.47M cycles, so
-the timeout never expires. The problem is purely the `rxd` model's cycles/bit
-being far slower than real serial (a modelling artifact already noted in
-issue 003 / lessons-learned: the auto-baud lock lands at ~128 cycles/bit, not a
-real baud).
+the timeout never expires. The problem is purely that ucSim's run-loop polls the
+serial input fd far too infrequently during a free `run` (the ~1.84M-cycle gap
+measured in `cl_serial_hw::proc_input`), so queued socket/pty bytes are picked
+up slower than the firmware's RX timeout.
 
 ### Fix options (none applied yet)
 
-1. **Make the `rxd` auto-baud lock land at a realistic bit-time** so the modeled
-   inter-byte gap is < ~1.47M cycles (i.e. drive the training byte so the
-   firmware derives a faster TH1 / the UART clocks bytes faster). Cleanest —
-   keeps the firmware honest, no core change.
-2. Drive command bytes under `step` (as `test_sim_roundtrip.py` does) rather
-   than a free `run`, so few firmware cycles pass between bytes.
+1. **Poll the serial input fd more often during `run`** (the real fix): in
+   `cl_app::run_go` the `commander->proc_input()` call is gated by
+   `if (++cyc > period)` with `period` left at its default; and/or
+   `commander->check()`/`input_avail()` only runs the select on a coarse
+   cadence. Making the serial fd be drained every (or every few thousand) sim
+   cycles would keep queued bytes inside the firmware's ~1.47M-cycle window.
+   This is a ucSim run-loop/console change, not a UART change.
+2. **Drive command bytes under `step`** (what `test_sim_roundtrip.py` does), so
+   few firmware cycles pass between bytes — reliable today, no ucSim change.
 3. (Not recommended) patch the firmware timeout — it is correct for real HW.
 
 ---
