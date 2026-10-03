@@ -7,8 +7,138 @@ fd. (NOT the UART bit-timing in `serial.cc`, and NOT the single-byte RX slot in
 **ucSim:** 0.9.9
 **Type:** host-input poll-cadence vs. firmware-timeout mismatch (NOT a
 dropped/garbled-byte bug, NOT a crash)
-**Status:** **ROOT CAUSE FOUND** (below). ucSim is unmodified. The reliable
-contract remains pre-staged `-S in=<file>` (`test_sim_roundtrip.py`).
+**Status:** **ROOT CAUSE FOUND + FIXED.** A one-line ucSim addition exposes the
+existing `serconf_check_often` flag as a runtime sub-command
+(`set hardware uart check_often 1`); with it enabled the live socket/pty
+round-trip dispatches. Verified by `simulator/tests/test_issue004_fix.py`
+(Makefile `sim-issue004-fix`). The pre-staged `-S in=<file>` path
+(`test_sim_roundtrip.py`) remains the zero-rebuild default.
+
+## Auto-baud response across host speeds [SIM]
+
+To characterise the receiver bring-up that precedes any command round-trip,
+`simulator/tests/sim_autobaud_sweep.sh` (Makefile `sim-autobaud-sweep`) drives
+the training byte `0x20` on P3.0 (via the `rxd` cl_hw pin driver) at a range of
+bit times and reports whether the firmware software auto-detect LOCKS (reaches
+`init_finish` 0x073C with `TH1=0xFC`, `TR1` set, `IE=0x17`).
+
+Standard wire bauds (`cyc/bit = 11059200 / baud / 12`) — none land in this
+model's window:
+
+| baud | cyc/bit | result |
+| ---: | ------: | :----- |
+| 1200 | 768 | NO-LOCK |
+| 2400 | 384 | NO-LOCK |
+| 4800 | 192 | NO-LOCK |
+| 9600 |  96 | NO-LOCK |
+
+The model's actual accepted window (literal cyc/bit, `SWEEP_CYC="…"`): locks
+**104..152 cyc/bit** (always deriving `TH1=0xFC`), refuses at 96 and 160:
+
+| cyc/bit | result |
+| ------: | :----- |
+| 88, 96 | NO-LOCK |
+| 104, 128, 152 | LOCK TH1=0xFC |
+| 160, 168, 192 | NO-LOCK |
+
+The absolute-baud vs machine-cycle/bit offset (nominal 9600 → 96 cyc/bit, just
+below the ~128-centred window) is a **modelling artifact** of representing the
+training edges in machine cycles — the firmware times them with Timer 0. The
+meaningful, verified result is the *shape* of the auto-detect: a single narrow
+accept window and one derived `TH1`. This is consistent with issue 003 (115200
+≈ 8 cyc/bit is far outside the window and cannot lock). The lock point itself is
+also asserted by `sim_serial_autobaud.sh` (128 cyc/bit).
+
+### How precisely does the firmware reproduce standard bauds? [BYTE]
+
+**It cannot hit them exactly, and — counter-intuitively — the error does NOT
+shrink at lower baud rates.** The derivation at the end of the measure block
+(`init.asm`, `baud_check`) is:
+
+```
+mov  A,R7      ; R7 = normalization multiplier
+dec  A         ; A = R7 - 1
+cpl  A         ; A = ~(R7-1)
+mov  TH1,A     ; Timer-1 reload
+```
+
+`R7` starts at `1` and the normalize loop only ever does `R7 <<= 1` (`rlc A`),
+so **R7 is always a power of two**. Therefore `TH1 = ~(2^n − 1)` and the Timer-1
+reload `(256 − TH1)` is restricted to `{1, 2, 4, 8, 16, 32, …}`. With SMOD=0,
+mode-1 UART (`baud = XTAL / (384 × (256−TH1))`) the only achievable bauds are a
+**power-of-two ladder** `XTAL / (384 · 2^n)`:
+
+| 256−TH1 | TH1 | baud (11.0592 MHz) |
+| ------: | :-- | -----------------: |
+| 1 | 0xFF | 28800 |
+| 2 | 0xFE | 14400 |
+| 4 | 0xFC | **7200** |
+| 8 | 0xF8 | 3600 |
+| 16 | 0xF0 | 1800 |
+| 32 | 0xE0 | 900 |
+
+#### Why the error is a CONSTANT RATIO, not a shrinking rounding error
+
+For a *normal* UART you round the reload to the nearest integer, so a bigger
+reload (lower baud) has finer resolution and **smaller** error — that is the
+usual intuition. This firmware is different: it does not round the reload, it
+**forces it to a power of two**. Both grids are then geometric with ratio 2:
+
+```
+standard series : 1200 2400 4800 9600 19200 38400   = 9600 · 2^k
+firmware ladder :  900 1800 3600 7200 14400 28800   = 7200 · 2^k
+```
+
+The ladder is a *fixed multiple* of the standard series
+(`7200/9600 = 3600/4800 = … = 0.75`). A fixed multiplicative offset stays
+multiplicatively constant at every rate — it can never decay as the rate drops.
+Hence the error is identical everywhere:
+
+| standard | nearest reachable | TH1 | rel. error |
+| -------: | ----------------: | :-- | ---------: |
+| 1200 | 900 | 0xE0 | −25% |
+| 2400 | 1800 | 0xF0 | −25% |
+| 4800 | 3600 | 0xF8 | −25% |
+| 9600 | 7200 | 0xFC | −25% |
+| 19200 | 14400 | 0xFE | −25% |
+| 38400 | 28800 | 0xFF | −25% |
+
+#### Where the 0.75 comes from (it is CRYSTAL-dependent)
+
+At 11.0592 MHz the *exact* reloads for the standard rates are **24, 12, 6, 3** —
+i.e. `3 · 2^k`. The power-of-two ladder is missing the **factor 3**. The nearest
+power of two to `3·2^k` is `4·2^k`, and a reload that is `4/3` too large yields
+`3/4` the baud → a uniform **−25%**. So the magnitude of the offset is set by the
+fractional part of `log2(exact_reload)`, which depends on the **crystal**, not on
+the baud:
+
+| crystal | exact std reloads | offset (all rates) |
+| :------ | :---------------- | :----------------- |
+| 11.0592 MHz (ROB3) | 24/12/6/3 = `3·2^k` | **−25%** |
+| 12.288 MHz | 26.7/13.3/6.7/3.3 | −16.7% |
+| (a crystal where std reloads are `2^k`) | … | ~0% |
+
+For contrast, a *correct* fixed-baud setup at 11.0592 MHz uses `256−TH1` =
+24/12/6/3 (`TH1` 0xE8/0xF4/0xFA/0xFD) to hit 1200/2400/4800/9600 **exactly** —
+divisors the auto-detect's power-of-two normalization can never produce.
+
+#### Provenance / caveat
+
+- **[BYTE]** The reload is forced to a power of two (`TH1 = ~(2^n−1)`), so
+  achievable bauds form the ladder `XTAL/(384·2^n)`.
+- **Arithmetic** The error vs any standard rate is a *constant ratio* fixed by
+  the crystal (−25% at 11.0592 MHz, because the exact reloads are `3·2^k`); it
+  does **not** diminish at lower rates, because both grids scale by 2 together.
+- **[SIM]** In this ucSim model every in-window training byte derives `TH1=0xFC`
+  (div 4 → 7200), verified across the whole 104..152 cyc/bit window by
+  `sim_autobaud_sweep.sh`. The firmware's own TX frame matches that TH1: the
+  `0x15` ACK takes ~18408 clocks SBUF-write→TI ≈ 12 bit-times at 1536 clk/bit
+  (7200 baud), so detect→TX are on one consistent clock.
+- **Not established** that a *real* 9600 host lands specifically on the 7200
+  rung — the sim represents the Timer-0 edge measurement in machine cycles, not
+  true wire time. The power-of-two reload constraint (and therefore the
+  constant-ratio error) holds regardless; which rung a given crystal/host
+  selects is the part that needs a bench measurement.
 
 ## ROOT CAUSE (confirmed [SIM] + arithmetic)
 
@@ -91,17 +221,31 @@ serial input fd far too infrequently during a free `run` (the ~1.84M-cycle gap
 measured in `cl_serial_hw::proc_input`), so queued socket/pty bytes are picked
 up slower than the firmware's RX timeout.
 
-### Fix options (none applied yet)
+### Fix options
 
-1. **Poll the serial input fd more often during `run`** (the real fix): in
-   `cl_app::run_go` the `commander->proc_input()` call is gated by
-   `if (++cyc > period)` with `period` left at its default; and/or
-   `commander->check()`/`input_avail()` only runs the select on a coarse
-   cadence. Making the serial fd be drained every (or every few thousand) sim
-   cycles would keep queued bytes inside the firmware's ~1.47M-cycle window.
-   This is a ucSim run-loop/console change, not a UART change.
+1. **Poll the serial input fd more often during `run`** — **THIS IS THE FIX
+   (applied).** ucSim already has a per-UART flag `serconf_check_often`
+   (`core/sim.src/serial_hw.cc`): when set, `cl_serial::tick()` drains the host
+   input fd (`io->input_avail()` → `io->proc_input(0)`) on **every serial tick**
+   instead of waiting for the coarse `cl_app::run_go` poll, so queued socket/pty
+   bytes are picked up well inside the firmware's ~1.47M-cycle RX timeout. It was
+   default-false with **no console/CLI way to turn it on**. The fix adds one
+   handler to `cl_serial_hw::set_cmd` so it can be toggled at runtime:
+
+   ```
+   set hardware uart check_often 1
+   ```
+
+   (patch: `core/sim.src/serial_hw.cc`, the `STRING NUMBER` branch — mirrors the
+   existing `raw` sub-command, calling `cfg_set(serconf_check_often, port)`.)
+   Rebuild the core lib + relink `ucsim_51`. **No UART-timing or firmware
+   change.** Verified: a live `-S port=` round-trip of `0x4F 0x03` now returns a
+   dispatched all-axis frame (`… 4f 8c 93 b1 8a 87 40 03`) instead of the
+   timeout `0xF1` — see `simulator/tests/test_issue004_fix.py`.
+
 2. **Drive command bytes under `step`** (what `test_sim_roundtrip.py` does), so
-   few firmware cycles pass between bytes — reliable today, no ucSim change.
+   few firmware cycles pass between bytes — reliable with a **stock** ucSim, no
+   rebuild. This stays the default for `make test`.
 3. (Not recommended) patch the firmware timeout — it is correct for real HW.
 
 ---

@@ -33,12 +33,12 @@ SAFEHEX    := $(BUILD)/rob3.hex
 
 .PHONY: all verify \
         sim-init sim-run sim-teachbox sim-teachbox-module sim-adc sim-serial \
-        sim-serial-autobaud sim-serial-e2e sim-program sim-teachbox-axis demo-teachbox demo-hello-program test clean help
+        sim-serial-autobaud sim-serial-e2e sim-autobaud-sweep sim-issue004-fix sim-ros2-live sim-teleop-ros2 sim-program sim-teachbox-axis demo-teachbox demo-hello-program test clean help
 
 all: test ## Default: run all tests (golden + behavioral)
 
 help: ## List targets
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		sort | awk 'BEGIN{FS=":.*?## "}{printf "  %-16s %s\n", $$1, $$2}'
 
 $(BUILD):
@@ -73,6 +73,24 @@ sim-serial-autobaud: $(SAFEHEX) ## Behavioral: software auto-baud brings UART up
 sim-serial-e2e: $(SAFEHEX) ## Behavioral: FULL serial RX chain — auto-baud lock -> real byte over -S link -> SBUF/RI -> RX ISR (opt-in; skips w/o loader ucsim_51 + adc/rxd)
 	@SAFEHEX=$(SAFEHEX) UCSIM_51="$(UCSIM_51)" SIMFLAGS="$(SIMFLAGS)" \
 		$(SIMDIR)/tests/sim_serial_e2e.sh
+
+sim-autobaud-sweep: $(SAFEHEX) ## Behavioral: SWEEP auto-baud across host speeds (standard bauds 1200..9600; SWEEP_CYC="..." for literal cyc/bit) (opt-in; skips w/o loader ucsim_51 + adc/rxd)
+	@SAFEHEX=$(SAFEHEX) UCSIM_51="$(UCSIM_51)" SIMFLAGS="$(SIMFLAGS)" \
+		SWEEP_BAUD="$(SWEEP_BAUD)" SWEEP_CYC="$(SWEEP_CYC)" \
+		$(SIMDIR)/tests/sim_autobaud_sweep.sh
+
+sim-issue004-fix: $(SAFEHEX) ## Behavioral: LIVE socket round-trip proves the `check_often` fix dispatches a frame (opt-in; needs check_often-enabled ucsim_51 + adc/rxd)
+	@SAFEHEX=$(SAFEHEX) UCSIM_51="$(UCSIM_51)" \
+		python3 $(SIMDIR)/tests/test_issue004_fix.py
+
+sim-ros2-live: $(SAFEHEX) ## Behavioral: the REAL ROS2 driver codec+SerialTransport round-trips over a LIVE pty (proves issue-004 fix end-to-end; needs check_often ucsim_51 + adc/rxd + driver + socat + pyserial)
+	@UCSIM_51="$(UCSIM_51)" DRIVER="$(DRIVER)" \
+		python3 $(SIMDIR)/tests/verify_ros2_driver_live.py
+
+sim-teleop-ros2: $(SAFEHEX) ## Behavioral: ROS2 TELEOP (JointJog -> rob3_driver -> firmware in free-running ucSim) inside the rob3-ros2 container (proves live teleop; skips w/o docker image + check_often ucsim_51 + driver)
+	@IMAGE="$(IMAGE)" UCSIM_HOST="$(UCSIM_HOST)" DRIVER_HOST="$(DRIVER_HOST)" \
+		TELEOP_TIMEOUT="$(TELEOP_TIMEOUT)" \
+		$(SIMDIR)/tests/sim_teleop_ros2.sh
 
 sim-teachbox: $(SAFEHEX) ## Behavioral: run the keypad scanner, assert key decode
 	@SAFEHEX=$(SAFEHEX) SIM="$(SIM)" SIMFLAGS="$(SIMFLAGS)" \

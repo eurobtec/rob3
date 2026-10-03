@@ -1,0 +1,23 @@
+diff --git a/src/core/sim.src/serial_hw.cc b/src/core/sim.src/serial_hw.cc
+index cfe318ec..f94d88c8 100644
+--- a/src/core/sim.src/serial_hw.cc
++++ b/src/core/sim.src/serial_hw.cc
+@@ -386,6 +386,18 @@ cl_serial_hw::set_cmd(class cl_cmdline *cmdline,
+ 	  set_raw();
+ 	  return true;
+ 	}
++      if (strcmp(p1, "check_often")==0)
++	{
++	  /* Drain the host input fd on every serial tick instead of waiting
++	     for the coarse run-loop poll. Keeps queued socket/pty RX bytes
++	     inside a tight firmware RX timeout during a free `run`.
++	     See rob3 simulator/issues/004. */
++	  cfg_set(serconf_check_often, (bool)port);
++	  if (con)
++	    con->dd_printf("uart%d check_often = %s\n",
++			   id, port ? "on" : "off");
++	  return true;
++	}
+       return false;
+     }
+   else if (cmdline->syntax_match(uc, STRING STRING))
