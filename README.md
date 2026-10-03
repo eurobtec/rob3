@@ -27,10 +27,12 @@ What exists in this repository today:
   confirmed against the ROM (hidden digital-input-read commands found), the
   startup handshake (0x15/0xF1 reply semantics), and the stored-program
   interpreter + a "hello world" program, all `[SIM]`-verified.
-- **Python ROS 2 driver** (`ros2/rob3_driver/`) — UR-driver-style package with
-  a ROS-independent protocol codec, serial+TCP transports, calibration, and a
-  driver node (JointState / FollowJointTrajectory / Trigger services). 25
-  pytest tests pass; driver bytes verified against the ROM dispatch in ucSim.
+- **Python ROS 2 driver** — a UR-driver-style package (ROS-independent protocol
+  codec, serial transport, calibration, and a driver node: JointState /
+  FollowJointTrajectory / JointJog teleop / Trigger services). Driver bytes
+  verified against the ROM dispatch in ucSim. **Now in its own repository:**
+  [eurobtec/rob3_ros2_driver](https://github.com/eurobtec/rob3_ros2_driver)
+  (see `simulator/USING_UCSIM_MCP.md` for how it ties back to this firmware).
 - **Hardware reference docs** for every board IC, plus compiled **ucSim
   peripheral modules** (`cl_hw`: teachbox, adc, loopback, rxd) for
   closer-to-real simulation — including a pin-level auto-baud driver.
@@ -67,7 +69,6 @@ rob3/
 │   ├── tests/                          #   ucSim behavioral tests
 │   ├── harness/                        #   Python batch driver + Teachbox GUI/CLI + plant
 │   ├── ucsim-modules/                  #   compiled cl_hw peripherals (teachbox/ adc/ loopback/ rxd/)
-├── ros2/rob3_driver/                 # Python ROS 2 driver (UR-style, RS-232)
 ├── hardware/                         # board reverse-engineering
 │   ├── board/                         #   per-chip docs (8031, 8255, 74LS138, EPROM, SRAM, ADC, L293, ...)
 │   ├── teachbox/  motors/  connectors/#   subsystem docs + Arduino bring-up sketches

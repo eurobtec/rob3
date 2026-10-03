@@ -12,17 +12,25 @@ description: >
   driver.
 metadata:
   origin: ROB3
-  globs: ["ros2/rob3_driver/**"]
+  globs: []
 ---
 
 # ROB3 ROS 2 driver (RS-232)
 
-> Package: `ros2/rob3_driver/` (ament_python). Talks the ROB3 low-level protocol
-> — reverse-engineered and [SIM]-verified in `hardware/host/command.md` and
-> `firmware/src/annotated/rs232.asm` — over RS-232 to the 8031,
-> or over ucSim's `-S` UART socket for development. Modelled on the UR ROS 2
-> driver but in Python. For the protocol itself see the `rob3-firmware-map` /
-> `rob3-firmware-sim` skills.
+> **Relocated:** the driver now lives in its own repository,
+> [eurobtec/rob3_ros2_driver](https://github.com/eurobtec/rob3_ros2_driver)
+> (package `rob3_driver/`, ament_python) — it is no longer under `ros2/` in this
+> firmware repo. Paths below are relative to that repo's `rob3_driver/`. This
+> skill stays here because the protocol/codec/calibration knowledge is
+> ROB3-firmware-specific. Note: the ucSim **TCP** transport was removed (ucSim's
+> socket drops frames — see `simulator/issues/004`); the driver is **serial-only**
+> (real `/dev/ttyUSB0` or a ucSim-attached pty), and a `JointJog` teleop
+> interface + keyboard node were added.
+>
+> Talks the ROB3 low-level protocol — reverse-engineered and [SIM]-verified in
+> this repo's `hardware/host/command.md` and `firmware/src/annotated/rs232.asm`
+> — over RS-232 to the 8031. Modelled on the UR ROS 2 driver but in Python. For
+> the protocol itself see the `rob3-firmware-map` / `rob3-firmware-sim` skills.
 
 ## Layered structure (ROS-independent core first)
 
@@ -74,12 +82,17 @@ axis window to avoid driving into a hard stop.
 
 ## Testing
 
-- Unit (no ROS): `python3 -m pytest ros2/rob3_driver/test/` — codec + calibration
-  (18 tests). Add cases here for any new command.
-- Driver-vs-ROM: `ros2/rob3_driver/test/test_driver_protocol_vs_rom.sh` feeds the
+(Paths relative to the `rob3_ros2_driver` repo's `rob3_driver/`.)
+
+- Unit (no ROS): `python3 -m pytest test/` — codec + calibration + fake-transport
+  client. Add cases here for any new command.
+- Driver-vs-ROM (byte-exact): `test/test_driver_protocol_vs_rom.sh` feeds the
   driver's encoded frame through the real ROM dispatch (`rx_dispatch` 0x03A9,
   A=ETX, header in R6, payload in 0x60..) in ucSim and asserts the firmware
   effect — the honest tie between the driver bytes and [SIM]-verified behaviour.
+- Driver-vs-ROM (round-trip): `test/test_sim_roundtrip.py` sends a query over
+  ucSim's **pre-staged `-S in=<file>`** path (the reliable, baud-paced one) and
+  parses the reply. The live socket/pty path is unreliable (`simulator/issues/004`).
   Run with `SAFEHEX=simulator/build/rob3.hex SIM=<s51|ucsim_51>`.
 - Node/launch need a ROS 2 env (Humble/Jazzy). `py_compile` is the syntax check
   available without ROS.
