@@ -54,17 +54,9 @@ try:
 except ImportError:  # not available on some platforms
     readline = None
 
-# The simulation harness is the `rob3_ucsim` package (simulator/src). Prefer the
-# installed/importable package; fall back to sibling modules if run in-place
-# without the package on sys.path.
-try:
-    from rob3_ucsim import Plant, N_AXES
-except ImportError:  # pragma: no cover - in-place fallback
-    import os as _os
-    import sys as _sys
-    _sys.path.insert(0, _os.path.join(
-        _os.path.dirname(_os.path.abspath(__file__)), "..", "..", "src"))
-    from rob3_ucsim import Plant, N_AXES
+# The simulation harness is the external `rob3_ucsim` package
+# (https://github.com/eurobtec/rob3_ucsim). Install it: `pip install rob3_ucsim`.
+from rob3_ucsim import Plant, N_AXES
 try:
     from rob3_ucsim import UCSimEngine, MAIN_LOOP
     HAVE_ENGINE = True

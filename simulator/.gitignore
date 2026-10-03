@@ -1,10 +1,8 @@
 # Generated simulator/build artifacts — reproducible via `make`
 build/
 
-# Python packaging / tooling artifacts (rob3_ucsim)
-.venv/
-venv/
+# Python tooling artifacts (the harness is now the external rob3_ucsim package)
 __pycache__/
 *.py[cod]
-*.egg-info/
 .pytest_cache/
+.venv/

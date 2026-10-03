@@ -12,9 +12,13 @@ the axis-servo ISR in correct context (see "Open work" below).
 
 | File | Purpose |
 | :--- | :------ |
-| `ucsim.py` | Batch driver for `s51` — run a command script, parse `dump`/`Stop at` output. |
 | `ARCHITECTURE.md` | The ucSim = bus-chips / plant = external boundary, and the `motor[6]`/`pot[6]` bridge to a Python plant or a robotics simulator (ROS2/Gazebo/Isaac). |
-| `gui/` | A Tkinter GUI: the 5x5 Teachbox + the six axes, with a live pot-feedback plant. See `gui/README.md`. |
+| `gui/` | A Tkinter GUI + CLI: the 5x5 Teachbox + the six axes, with a live pot-feedback plant. Uses the external [`rob3_ucsim`](https://github.com/eurobtec/rob3_ucsim) package (`UCSimEngine`, `Plant`). See `gui/README.md`. |
+
+> The Python harness library (`UCSimEngine`, `UCSimBatch` batch driver, `Plant`)
+> moved to its own repo, [eurobtec/rob3_ucsim](https://github.com/eurobtec/rob3_ucsim)
+> (built on [`pyucsim`](https://github.com/eurobtec/pyucsim)). Install it to run
+> the GUI/CLI: `pip install git+https://github.com/eurobtec/rob3_ucsim.git`.
 
 ## Attaching the Teachbox (input device model)
 

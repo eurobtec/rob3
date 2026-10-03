@@ -105,7 +105,7 @@ sim-adc: $(SAFEHEX) ## Behavioral: free-run past the ADC/INT1 gate via the compi
 		$(SIMDIR)/tests/sim_adc.sh
 
 sim-teachbox-axis: $(SAFEHEX) ## Black-box: real keypad axis-select -> POSITION mode (needs teachbox+loopback cl_hw; skips w/o them)
-	@UCSIM_51="$(UCSIM_51)" python3 $(SIMDIR)/tests/test_teachbox_axis_select.py
+	@UCSIM_51="$(UCSIM_51)" ROB3_HEX="$(SAFEHEX)" python3 $(SIMDIR)/tests/test_teachbox_axis_select.py
 
 demo-teachbox: $(SAFEHEX) ## Demo: teachbox key press -> axis-select -> jog -> axis position moves (needs custom ucsim_51)
 	@SAFEHEX=$(SAFEHEX) SIMFLAGS="$(SIMFLAGS)" \

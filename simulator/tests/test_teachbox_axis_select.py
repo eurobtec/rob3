@@ -24,9 +24,14 @@ import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "..", "src"))
 
-from rob3_ucsim import UCSimEngine, MAIN_LOOP  # noqa: E402
+try:
+    from rob3_ucsim import UCSimEngine, MAIN_LOOP  # pip install rob3_ucsim
+except ImportError:
+    print("SKIP  test_teachbox_axis_select: rob3_ucsim not installed "
+          "(pip install git+https://github.com/eurobtec/rob3_ucsim.git)")
+    print("test_teachbox_axis_select: SKIPPED")
+    sys.exit(0)
 
 
 def _reg(eng, name):
