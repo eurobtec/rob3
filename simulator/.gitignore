@@ -1,2 +1,10 @@
 # Generated simulator/build artifacts — reproducible via `make`
 build/
+
+# Python packaging / tooling artifacts (rob3_ucsim)
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/

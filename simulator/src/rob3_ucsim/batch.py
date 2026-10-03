@@ -4,8 +4,8 @@
 Rather than hold a fragile interactive session, each "transaction" runs s51 once
 on a script of commands and parses the full output. State that must persist
 across transactions (RAM contents, PC) is re-applied at the top of each script
-by the caller (see rob3_sim.py, which keeps a shadow of the relevant RAM and
-re-seeds it every tick). This is slower but deterministic and robust.
+by the caller (keep a shadow of the relevant RAM and re-seed it every tick).
+This is slower but deterministic and robust.
 
 Requires the `s51` binary (SDCC ucSim) on PATH.
 """

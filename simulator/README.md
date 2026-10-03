@@ -18,11 +18,23 @@ just documents what lives in this directory.
 
 | Path | Kind | Description |
 | :--- | :--- | :---------- |
+| `src/rob3_ucsim/` | package | **`rob3_ucsim`** — the reusable Python harness library (`UCSimEngine`, `UCSimBatch`, `Plant` + firmware landmarks). `pip install -e .` here; see [`src/rob3_ucsim/README.md`](src/rob3_ucsim/README.md). Usable alongside the [`rob3`](https://github.com/eurobtec/rob3_py) protocol library. |
+| `pyproject.toml` | package | Build/metadata for `rob3_ucsim`. |
 | `tests/*.sh`, `tests/*.py` | tests | Behavioral: run the real ROM in ucSim and assert runtime state matches the annotated `.asm`. |
 | `tests/README.md` | doc | Per-test detail: assertions, injected stimuli, standalone run, reading failures. |
 | `ucsim-modules/` | sources | Loadable `cl_hw` peripherals (teachbox / adc / loopback / rxd) for the opt-in tests. |
-| `harness/` | tools | Python batch driver + interactive GUI/CLI + the plant model. |
+| `harness/gui/` | tools | Interactive GUI + CLI apps (use the `rob3_ucsim` package). |
 | `build/` | generated | Shell-safe HEX copy (`rob3.hex`) and sim scratch. Created by `make`; removed by `make clean`. |
+
+## Python harness package (`rob3_ucsim`)
+
+The reusable Python harness is packaged as **`rob3_ucsim`** under `src/`
+(`pip install -e simulator`). It drives this ROM in ucSim and reads back its
+state, and is designed to be used together with the
+[`rob3`](https://github.com/eurobtec/rob3_py) RS-232 protocol library. The
+behavioral `tests/`, the GUI/CLI, and the `.so` modules stay in this repo — the
+package is just the library extracted from `harness/`. See
+[`src/rob3_ucsim/README.md`](src/rob3_ucsim/README.md).
 
 ## How it fits together
 

@@ -25,9 +25,18 @@ import threading
 import tkinter as tk
 from tkinter import ttk
 
-from plant import Plant, N_AXES
+# The simulation harness is the `rob3_ucsim` package (simulator/src). Prefer the
+# installed/importable package; fall back to the sibling src dir if run in-place.
 try:
-    from engine import UCSimEngine, MAIN_LOOP, IRAM_CURPOS
+    from rob3_ucsim import Plant, N_AXES
+except ImportError:  # pragma: no cover - in-place fallback
+    import os as _os
+    import sys as _sys
+    _sys.path.insert(0, _os.path.join(
+        _os.path.dirname(_os.path.abspath(__file__)), "..", "..", "src"))
+    from rob3_ucsim import Plant, N_AXES
+try:
+    from rob3_ucsim import UCSimEngine, MAIN_LOOP, IRAM_CURPOS
     HAVE_ENGINE = True
 except Exception:                       # pragma: no cover - engine optional
     HAVE_ENGINE = False

@@ -3,7 +3,7 @@
 
 Holds one long-lived `ucsim_51` (or `s51`) process and talks to it line by line,
 using a prompt marker (`-p`) to know when a command has finished. This is the
-interactive counterpart to harness/ucsim.py's batch driver — the GUI needs to
+interactive counterpart to the UCSimBatch batch driver — the GUI needs to
 press a key, run a bit, read state, and repeat, all in one session.
 
 Boundary (see harness/ARCHITECTURE.md):
