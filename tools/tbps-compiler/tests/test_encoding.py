@@ -52,6 +52,22 @@ def test_pos_axis_is_move_target_class_opcode():
     assert prog.slots[0].operands == [100]
 
 
+def test_pos_axis_with_speed_is_speed_class():
+    # POS a . n , s -> move+speed class 0x70+(axis-1), operands [pos, speed].
+    prog = _slots("POS 1 . 128 , 3")
+    assert prog.slots[0].opcode == 0x70        # axis 1 -> fw 0
+    assert prog.slots[0].operands == [128, 3]
+    prog = _slots("POS 2 . 200 , 5")
+    assert prog.slots[0].opcode == 0x71        # axis 2 -> fw 1
+    assert prog.slots[0].operands == [200, 5]
+
+
+def test_pos_speed_out_of_range_rejected():
+    from tbps_compiler import compile_source
+    assert not compile_source("POS 1 . 10 , 0").ok   # speed < 1
+    assert not compile_source("POS 1 . 10 , 6").ok   # speed > 5
+
+
 def test_pos_store_is_all_axes_opcode():
     prog = _slots("POS")
     assert prog.slots[0].opcode == (isa.OP_POS_SET | isa.AXIS_ALL)  # 0x07

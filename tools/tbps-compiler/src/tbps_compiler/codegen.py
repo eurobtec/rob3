@@ -120,7 +120,13 @@ def _slot_pos_axis(node: P.PosAxis) -> Slot:
     operand byte: the target position.  [SIM]
     """
     axis_fw = isa.axis_user_to_fw(node.axis)
-    return Slot(isa.pos_move_opcode(axis_fw), [node.position & 0xFF], node.line)
+    if node.speed is None:
+        # Plain move: class 0x60+axis, one operand (target).  [SIM]
+        return Slot(isa.pos_move_opcode(axis_fw), [node.position & 0xFF], node.line)
+    # Move + speed: class 0x70+axis, operands [target, speed].  [SIM] verified:
+    # 0x71 0x80 0x03 -> target[0x41]=0x80, speed[0x71]=0x03, motion armed.
+    return Slot(isa.pos_speed_opcode(axis_fw),
+                [node.position & 0xFF, node.speed & 0xFF], node.line)
 
 
 def _slot_pos_store(node: P.PosStore) -> Slot:

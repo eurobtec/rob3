@@ -38,8 +38,14 @@ def _label(m: int) -> str:
 def _emit_pos(node: P.PosAxis, out: list[str]) -> None:
     axis = isa.axis_user_to_fw(node.axis)
     bit = 1 << axis
-    out.append(f"    ; POS {node.axis} . {node.position}  (move axis {axis})")
-    out.append(f"    mov  TARGET_BASE+{axis},#0x{node.position & 0xff:02x}")
+    if node.speed is None:
+        out.append(f"    ; POS {node.axis} . {node.position}  (move axis {axis})")
+        out.append(f"    mov  TARGET_BASE+{axis},#0x{node.position & 0xff:02x}")
+    else:
+        out.append(f"    ; POS {node.axis} . {node.position} , {node.speed}"
+                   f"  (move+speed axis {axis})")
+        out.append(f"    mov  TARGET_BASE+{axis},#0x{node.position & 0xff:02x}")
+        out.append(f"    mov  SPEED_BASE+{axis},#0x{node.speed & 0xff:02x}")
     out.append(f"    orl  NEED_MOVE,#0x{bit:02x}")
     out.append(f"    orl  MOVING,#0x{bit:02x}")
 

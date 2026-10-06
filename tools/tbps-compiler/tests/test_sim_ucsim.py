@@ -490,3 +490,20 @@ def test_goto_branches_to_label(engine):
     lo = engine._dump_byte("iram", 0x66)
     hi = engine._dump_byte("iram", 0x67)
     assert (hi << 8 | lo) == target
+
+
+def test_pos_with_speed_writes_target_and_speed(engine):
+    """A compiled POS a.n,s (move+speed, 0x70+axis) writes target[0x40+axis]
+    and speed[0x70+axis] (verified firmware class)."""
+    from tbps_compiler.simload import load_program, set_program_pc, run_one_instruction
+    prog = compile_source("MARK 0\nPOS 2 . 128 , 3\nINS .", raise_on_error=True)
+    assert prog.slots[1].opcode == 0x71          # axis 2 -> fw 1 -> 0x70|1
+    load_program(engine, prog)
+    set_program_pc(engine, isa.SRAM_BODY_BASE + 1 * isa.SLOT_SIZE)
+    engine.command("set mem iram 0x41 0x00")
+    engine.command("set mem iram 0x71 0x00")
+    engine.command("set mem iram 0x28 0x0e")
+    engine.command("set mem iram 0x26 0x00")
+    run_one_instruction(engine)
+    assert engine._dump_byte("iram", 0x41) == 128     # target[axis1]
+    assert engine._dump_byte("iram", 0x71) == 3       # speed[axis1]

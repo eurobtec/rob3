@@ -72,6 +72,7 @@ class PosStore(Node):
 class PosAxis(Node):
     axis: int = 1          # user axis 1..6
     position: int = 0
+    speed: int | None = None   # optional travel speed 1..5 (None = plain move)
 
 
 @dataclass
@@ -165,7 +166,13 @@ class _Parser:
                 hi = isa.GRIPPER_MAX if axis == 6 else isa.POS_MAX
                 if not self._range(pos, isa.POS_MIN, hi, line, 2, f"POS axis {axis} position"):
                     return
-                self.nodes.append(PosAxis(line.number, src, axis=axis, position=pos))
+                # Optional travel speed (1..5): `POS a . n , s` / `POS a . n s`.
+                speed = None
+                if len(toks) > 3:
+                    speed = self._int(line, 3, "POS speed")
+                    if speed is None or not self._range(speed, isa.SPEED_MIN, isa.SPEED_MAX, line, 3, "POS speed"):
+                        return
+                self.nodes.append(PosAxis(line.number, src, axis=axis, position=pos, speed=speed))
 
         elif head == isa.Mnemonic.TIM:
             val = self._int(line, 1, "TIM delay")

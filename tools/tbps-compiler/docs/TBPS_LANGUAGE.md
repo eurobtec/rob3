@@ -58,7 +58,7 @@ Header       = "STOP" [ "0" ] ;                 (* program header; emits no byte
 ModeClear    = "CLR" ;                           (* mode change; emits no byte   *)
 Mark         = "MARK" Label ;
 PosStore     = "POS" ;                            (* store current position (all) *)
-PosMove      = "POS" Axis [ "." ] Position ;      (* move axis to position         *)
+PosMove      = "POS" Axis [ "." ] Position [ [ "," ] Speed ] ;  (* move [+ speed] *)
 Tim          = "TIM" Delay ;
 Goto         = "GOTO" Label [ [ "." ] Counter ] ;
 If           = "IF" InputPin [ [ "." ] Label ] ;
@@ -79,6 +79,7 @@ End          = "INS" [ "." ] ;                    (* program end                
 | `Counter` | `GOTO` loop count | `0 … 255` |
 | `InputPin` | digital input | `1 … 8` |
 | `OutputPin` | digital output | `1 … 8` |
+| `Speed` | `POS` travel speed (optional) | `1 … 5` (1 = slow, 5 = fast) |
 
 ---
 
@@ -92,6 +93,7 @@ Programs are stored in external SRAM. Each instruction occupies a **fixed
 |:------------|:-------|:--------------|:-------|:------|
 | `MARK m` | `0x1F` | `m` | label definition (preprocessor records PC in page-0x80 table) | [SIM] |
 | `POS a . n` | `0x60 + (a−1)` | `n` | **move**: `target[0x40+axis] = n`, arms motion | [SIM] |
+| `POS a . n , s` | `0x70 + (a−1)` | `n`, `s` | **move + speed**: target + `speed[0x70+axis]`, arms motion | [SIM] |
 | `POS` | `0x07` | 6 bytes | store current position (all axes) | [INFER] |
 | `TIM t` | `0x18` | `t`&0xFF, `t`>>8 | delay → IRAM `0x1A/0x1B` | [SIM] |
 | `OUT k +` | `0x10 + (k−1)&3` | `0x00` | set output k LOW (active) | [SIM] |

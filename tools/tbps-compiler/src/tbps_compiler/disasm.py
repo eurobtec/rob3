@@ -50,6 +50,14 @@ def decode_slot(opcode: int, operands: bytes, addr: int) -> DecodedInstr:
     if opcode == isa.BIT6:   # 0x40 = NOP class
         return DecodedInstr(addr, opcode, ".", "NOP")
 
+    # POS move + speed: 0x70..0x76 (bit6=1,bit5=1,bit4=1), low3 = axis.
+    if (opcode & 0xF8) == isa.OP_POS_SPEED:
+        axis = _axis_fw(opcode)
+        if axis == isa.AXIS_ALL:
+            return DecodedInstr(addr, opcode, "POS", "move+speed all axes")
+        return DecodedInstr(addr, opcode, f"POS {axis + 1} . {operands[0]} , {operands[1]}",
+                            "move+speed")
+
     # POS move: 0x60..0x66 (bit6=1,bit5=1,bit4=0), low3 = axis.
     if (opcode & 0xF8) == isa.OP_POS_MOVE:
         axis = _axis_fw(opcode)

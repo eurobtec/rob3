@@ -111,6 +111,7 @@ GRIPPER_MAX = 100                      # electric gripper 0..100
 DELAY_MIN, DELAY_MAX = 0, 65535        # TIM t (x100 ms)
 COUNTER_MIN, COUNTER_MAX = 0, 255      # GOTO m . n
 PORT_MIN, PORT_MAX = 1, 8             # IF i / OUT k
+SPEED_MIN, SPEED_MAX = 1, 5            # POS a . n travel speed (1=slow..5=fast)
 
 
 class Mnemonic(str, Enum):

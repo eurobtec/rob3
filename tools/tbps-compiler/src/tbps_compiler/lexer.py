@@ -62,8 +62,8 @@ def tokenize_line(raw: str, number: int) -> Line:
         return Line(number=number, raw=raw, tokens=[])
     # Separate +/- so "OUT 1+" and "OUT 1 +" both tokenize to [..., '+'].
     text = re.sub(r"([+\-])", r" \1 ", text)
-    # '.' is a visual separator; turn it into whitespace.
-    text = text.replace(".", " ")
+    # '.' and ',' are visual/parameter separators; turn them into whitespace.
+    text = text.replace(".", " ").replace(",", " ")
     tokens = [t for t in text.split() if t]
     # Drop the ENT terminator (case-insensitive) -- it carries no bytes.
     tokens = [t for t in tokens if t.upper() != "ENT"]
