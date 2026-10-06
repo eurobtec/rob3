@@ -178,10 +178,27 @@ ADC0808/0809**, EOC → INT1 — *not* a quadrature encoder. [HW]
    ENT/arrow block; the firmware index formula is authoritative).
    **Entry state:** the keypad store needs the program PC `0x66:0x67` →
    `0x8100`, page regs `0x3E`=0x80/`0x3F`=0x81, and INPUT mode — normally
-   established by the `STOP 0 ENT` header (STOP's own key position is not in
-   board.md's matrix, left column `p3 DB25`; still `[INFER]`). Remaining `[INFER]`:
-   per-instruction operand digit→commit sequences for OUT/TIM/GOTO/IF (the
-   MARK case is proven). Test: `simulator/tests/test_teachbox_typing.py`.
+   established by the `STOP 0 ENT` header. **STOP is a soft reset of the
+   editor/entry state, not a CPU reset** (board.md: the STOP/ERR-CLR handler
+   "handles cancellations and resets… clears the transient error registers
+   (0x21), switches off the ERR lamp, resets the entry parsing caches to zero" —
+   it does NOT jump the reset vector 0x0600). `STOP 0 ENT` extends that to clear
+   the program and build a fresh header (manual: "clears memory, initializes for
+   programming"). So seeding PC=0x8100 / pages / INPUT mode directly is a
+   faithful stand-in for the `STOP 0` header (what the keypad tests do). STOP's
+   exact key index (left column, `p3 DB25`, outside the /Y matrix) is still
+   `[INFER]`.
+   **Keypad opcodes verified by typing (fresh-state probe) [SIM]:** `MARK 0 ENT`
+   → stores `0x1F`; `GOTO 0 ENT` → stores **`0x34`** (independent keypad
+   cross-check of the corrected bytecode GOTO opcode); `TIM 0 ENT` → `0x19`
+   (low bit set — the keypad encodes the operand *variant* in the opcode low
+   bits). OUT/POS do not commit until their operands+ENT are entered.
+   **Remaining `[INFER]` (genuinely hard, not yet mapped):** the per-instruction
+   operand-entry → commit state machine — the digit/`.`/sign/ENT key sequences
+   for `TIM t`, `OUT k +/-`, `POS a . n`, `GOTO m . n`, `IF i . m` with real
+   operands (probes with non-zero operands did not commit; chaining multiple
+   typed instructions on one session also needs this editor state machine).
+   Test: `simulator/tests/test_teachbox_typing.py`.
 4. **Program interpreter** — executes stored motion programs from external
    SRAM. Entry points [BYTE][SIM]: `prog_prepare` **0x0803** (label-table
    preprocessor: records each `MARK` opcode `0x1F` as a 2-byte PC in the

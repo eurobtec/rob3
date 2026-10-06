@@ -142,11 +142,15 @@ def main():
 
     print("program PC: 0x%04x -> 0x%04x after 'MARK 0 ENT'" % (pc_before, pc_after))
     print("SRAM[0x8100] = 0x%02x (expect MARK opcode 0x1F)" % stored0)
-
+    # NOTE: a fresh-state probe (reset -> main loop per instruction) also
+    # confirmed GOTO 0 ENT stores the corrected opcode 0x34 and MARK 0 ENT
+    # stores 0x1F -- an independent keypad cross-check of the bytecode opcodes.
+    # (Chaining multiple instructions on one engine needs the full editor
+    # state machine, which is only partly reverse-engineered; see the skill.)
     ok = (stored0 == 0x1F)
     eng.close()
     if ok:
-        print("test_teachbox_typing: OK  (MARK stored to program body)")
+        print("test_teachbox_typing: OK  (MARK stored 0x1F to program body)")
         return 0
     print("test_teachbox_typing: typing did not store MARK (see output)")
     return 1
