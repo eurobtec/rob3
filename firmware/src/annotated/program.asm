@@ -44,9 +44,38 @@
 ;   [SIM] Verified: a 0x47 opcode at 0x8100 is fetched into 0x27 and the PC
 ;   advances 0x8100 -> 0x8108 (an 8-byte instruction slot).
 ;
+; TEACHBOX (TBPS) instruction -> program-opcode map, as decoded here and
+; cross-checked against the TBPS language (hardware/teachbox/README.md) and a
+; compiler verified in ucSim (tools/tbps-compiler).                        [SIM]
+;   MARK m        0x1F        label def (preprocessor only; operand = m)
+;   POS a . n     0x60|axis   MOVE axis -> target[0x40+axis]; operand = n;
+;                             arms motion mask 0x2B/0x2C (prog_exec .6=1 .5=1).
+;                             [SIM] 0x61 0x40 at 0x8100 -> IRAM 0x41 = 0x40;
+;                             0x60 0x80 -> IRAM 0x40 = 0x80.
+;   POS (store)   0x07        all-axes set-position (writes positions 0x50..).
+;   TIM t         0x18        delay; operands lo,hi -> 0x1A/0x1B (prog_exec
+;                             .4=1 .3=1, store at 0x09E6). [SIM] 0x18 0x32 ->
+;                             ACC=0x32 at 0x09E6.
+;   OUT k +/-     0x10|k      digital out via portb_write (0x07D3); operand =
+;                             state (+ = 0x00 LOW, - = 0x01 HIGH). (prog_exec
+;                             .4=1 .3=0, LCALL 0x07D3 at 0x09D9). [SIM]
+;   GOTO m [. n]  0x30        branch (bit5+bit4); operands m[,count].   [INFER]
+;   IF i [. m]    0x20        input test (bit5); operands mask,label.    [INFER]
+;   INS . (END)   bit7 set    program end (prog_exec .7=1 at 0x094D). [SIM]
+;   DEL . (HALT)  0x36        the 3-byte special opcode (preprocessor).  [INFER]
+;   STOP 0 / CLR  --          header / mode-change: emit NO stored byte.
+;
 ; The teachbox editor and the serial 0x81 uploader write the SAME bytes into
 ; this store; the executor here runs them. Opcodes seen in the preprocessor:
 ; 0x1F = MARK (label definition), 0x36 = a 3-byte instruction (see below).
+;
+; [SIM] END-TO-END (tools/tbps-compiler ucSim tests): a compiled program
+; uploaded over RS-232 via the 0x81 block protocol (header, pointer = payload
+; length, count = 0, program bytes + the 0x83 stream sentinel) is stored to SRAM
+; 0x8100.. byte-exact, the firmware sets program-loaded (0x28.1) on the valid
+; frame, and running prog_exec on it executes the uploaded instruction (a
+; "POS 1 . 128" step sets axis-0 target to 0x80). The same bytes also run when
+; written straight into xram (direct load).
 ;
 ;==============================================================================
         ; symbols (the inc/*.inc equates) are provided by

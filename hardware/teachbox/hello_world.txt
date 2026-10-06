@@ -1,0 +1,17 @@
+; ROB3 TBPS "hello world" — blink digital output 1 and sweep axis 1.
+; Compile with:  tbpsc hello_world.txt --hex
+; (see ../../tools/tbps-compiler ; byte encoding verified against the ROM)
+
+STOP 0 ENT        ; Clear memory, generate program header (no stored byte)
+MARK 0 ENT        ; Start address, label 0
+CLR               ; Switch to INPUT mode (no stored byte)
+POS ENT           ; Store current arm position as the starting position
+
+; --- loop body ---
+OUT 1 + ENT       ; Output 1 LOW  (turn LED on)
+TIM 50 ENT        ; Wait 5 s (50 x 100 ms)
+OUT 1 - ENT       ; Output 1 HIGH (turn LED off)
+TIM 50 ENT        ; Wait 5 s (50 x 100 ms)
+POS 1 . 255 ENT   ; Move axis 1 to position 255 (8-bit range 0..255)
+GOTO 0 ENT        ; Loop back to label 0 (endless)
+INS . ENT         ; Program end

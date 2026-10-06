@@ -1,0 +1,10 @@
+# Python build/venv/cache artifacts
+.venv/
+dist/
+build/
+*.egg-info/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/

@@ -208,9 +208,16 @@
         ; djnz    R0,rx_exit          ; 036F: D8 xx  more bytes in this run -> 0x03A1
         ; djnz    R2,rx_exit          ; 0371: DA xx  more runs -> 0x03A1
         ; movx    A,@DPTR             ; 0373: E0     read back last written byte        [HW]
-        ; cjne    A,#0x83,hdr_reset   ; 0374: B4 83 xx  verify == 0x83 sentinel         [INFER]
-        ; setb    0x28.1              ; 0379: mark "program loaded"                      [INFER]
+        ; cjne    A,#0x83,hdr_reset   ; 0374: B4 83 xx  verify == 0x83 sentinel         [SIM]
+        ; setb    0x28.1              ; 0379: mark "program loaded"                      [SIM]
         ; sjmp    hdr_reset           ; 037A: -> 0x039F (arm for next frame)
+        ;
+        ; [SIM] UPLOAD FRAME RECIPE (verified end-to-end in tools/tbps-compiler):
+        ;   send 0x81, then PTR = total payload length, then COUNT = 0, then the
+        ;   program bytes followed by a trailing 0x83 stream-sentinel. rx_setcount
+        ;   does `inc R2` so COUNT=0 -> one run; R0=PTR streams the whole payload;
+        ;   the final 0x83 passes the readback check here and sets 0x28.1. The
+        ;   stored bytes land at 0x8100.. byte-exact and then run via prog_exec.
 
 ; rx_setptr:                          ; 0x037B  (0x81 + 0x24.3): this byte is the ptr
         ; mov     R0,A                ; 037B: F8     R0 = byte-count for the run

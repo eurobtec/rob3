@@ -12,6 +12,20 @@ likely to recur.
 
 ## ucSim / simulation
 
+### Loading a program into xram: use `set mem xram`, NOT a multi-line `download`
+To put a TBPS program (or any bytes) into external SRAM for a test, use
+`set mem xram <addr> b0 b1 b2 …` — it sets **multiple bytes in one immediate
+command** and is reliable. Do **not** drive ucSim's interactive **`download`**
+command with the hex records pipelined in a single console write: `download`
+reads Intel-HEX records interactively, and feeding it a multi-line block in one
+write hits the console `resUSER`/pipelined-input trap and **crashes the ucSim
+process** (symptom this project hit: "ucSim process is not running" right after
+a `download …\n:10….\n…` block). If you must use `download`, send the command,
+then each record, then the `:00000001FF` EOF as **separate** writes. For loading
+a compiled program the `set mem xram` path (e.g. `simload.load_program`) is the
+tested one.
+
+
 ### The `@` in `M2764A@DIP28.HEX` crashes ucSim
 ucSim (`s51` / `ucsim_51`) parses a file argument as `filename@memoryspace`. The
 ROM image `firmware/hex/M2764A@DIP28.HEX` is therefore read as file `M2764A`

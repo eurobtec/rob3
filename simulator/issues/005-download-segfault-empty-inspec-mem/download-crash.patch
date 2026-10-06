@@ -1,0 +1,26 @@
+diff --git a/src/core/sim.src/uc.cc b/src/core/sim.src/uc.cc
+index 0281c9f1..6bd189c3 100644
+--- a/src/core/sim.src/uc.cc
++++ b/src/core/sim.src/uc.cc
+@@ -533,6 +533,10 @@ cl_inspec::cl_inspec(chars aspec, class cl_uc *auc)
+   offset_name= "0";
+   offset= 0;
+   uc= auc;
++  mem= (auc != NULL) ? auc->rom : NULL;  // default target: ROM/code space.
++                                         // (Fixes a crash: an empty inspec left
++                                         // `mem` uninitialized, so `download`
++                                         // dereferenced a garbage pointer.)
+   use_min= 0;
+   use_max= 0xffffffff;
+ }
+@@ -543,7 +547,9 @@ cl_inspec::init(void)
+   if (inited)
+     return 0;
+   if (ispec.empty())
+-    {      
++    {
++      mem= uc->rom;   // empty spec => default to the ROM/code space
++      inited= true;
+       return 0;
+     }
+   file_name= "";

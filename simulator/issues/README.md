@@ -23,6 +23,7 @@ Verified against the ucSim **0.9.9** checkout used by this project
 | [002](002-segfault-on-at-in-filename/) | Segfault loading an input file whose name contains `@` | **submitted upstream ([#13](https://github.com/danieldrotos/ucsim/issues/13)) + closed** |
 | [003](003-mcs51-uart-does-not-drive-rxd-txd-pins/) | MCS-51 UART does not drive the RXD/TXD pins (blocks software auto-baud) | **limitation + repro; `rxd` cl_hw module supplies the missing pin** |
 | [004](004-async-serial-rx-dropped-or-garbled/) | ucSim serial inter-byte timing (~1.84M cyc) exceeds the firmware's 20-tick (~1.47M cyc) RX timeout → no live socket/pty command round-trip | **ROOT CAUSE FOUND; not a ucSim byte bug; use `-S in=<file>`** |
+| [005](005-download-segfault-empty-inspec-mem/) | `download` command segfaults — empty `cl_inspec` leaves `mem` uninitialized (wild-pointer deref in `set_rom`) | **confirmed bug + repro + patch (fixed in this checkout)** |
 
 ## Investigated but not filed as bugs
 

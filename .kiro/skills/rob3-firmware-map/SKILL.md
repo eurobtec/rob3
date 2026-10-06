@@ -109,6 +109,15 @@ Register banks: 0 = main (`0x00`), 1 = ISRs INT0/INT1 (`0x08`), 2 = serial ISR
 Details and the decode logic are in `rob3-hardware`. Feedback is **analog via
 ADC0808/0809**, EOC → INT1 — *not* a quadrature encoder. [HW]
 
+> **0x58 ≠ program store (don't confuse them).** [BYTE][SIM] Init at `0x0639`
+> *probes* for the SRAM by a complement write/readback at **`0x8000`** (retry at
+> `0xA000`), and records the working page in **`0x3E`=0x80 / `0x3F`=0x81** — so
+> the program store is **0x8000–0x9FFF**. The `MOV DPH,#0x58` at **`0x0678`** is
+> the **ADC** device window (channel-select/START + EOC wait, then the feedback
+> `0x58→0x50` copy), *not* the program base. The `hardware/teachbox/board.md`
+> text claiming the program lives at "5800H–5FFFH" is **stale/incorrect** —
+> that `0x58` is the ADC MOVX window; the real base is probed and is `0x80`.
+
 ## The five subsystems
 
 1. **Axis servo controller** (INT1 ISR `0x00C0`) — round-robin over 6 axes via
@@ -153,6 +162,26 @@ ADC0808/0809**, EOC → INT1 — *not* a quadrature encoder. [HW]
    (loopback module) — see `rob3-firmware-sim`. POS-digit value entry
    (`pos_digit` 0x0D65 / `pos_commit` 0x0D9F) is `[BYTE]` but not yet mapped as a
    black-box key sequence.
+   **Program typing (keypad → stored program) — [SIM] verified:** typing an
+   instruction on the keypad DOES store it into the external-SRAM program body.
+   Verified end-to-end in ucSim (teachbox+loopback+adc modules, from the main
+   loop): tapping **`MARK` `0` `ENT`** writes opcode **`0x1F`** to the program
+   body at `0x8100` and advances the program PC (`0x66:0x67`) by one 8-byte slot
+   to `0x8108` — matching the compiler/interpreter encoding. The store path is
+   `kbd_handle`→`0x0DA5` (`mov DPL,0x66 / mov DPH,0x67 / movx @DPTR,A`), opcode
+   staged in `R3`; commit on the `ENT` key.
+   Key matrix (module `set hardware teachbox <row> <group>`, row = 74LS138 `/Y`
+   0..7, group = P1 column 1..3; firmware **index = row+1 + (group−1)×8**):
+   `MARK`=(4,3)=idx0x15, `OUT`=(1,3), `TIM`=(3,3), `POS`=(2,3), `GOTO`=(5,3),
+   `IF`=(6,3), `INS`=(0,3); **`ENT`=(5,2)=idx0x0E** — note this contradicts
+   `board.md`'s "/Y5·grp1" cell (that doc's group column is mislabelled for the
+   ENT/arrow block; the firmware index formula is authoritative).
+   **Entry state:** the keypad store needs the program PC `0x66:0x67` →
+   `0x8100`, page regs `0x3E`=0x80/`0x3F`=0x81, and INPUT mode — normally
+   established by the `STOP 0 ENT` header (STOP's own key position is not in
+   board.md's matrix, left column `p3 DB25`; still `[INFER]`). Remaining `[INFER]`:
+   per-instruction operand digit→commit sequences for OUT/TIM/GOTO/IF (the
+   MARK case is proven). Test: `simulator/tests/test_teachbox_typing.py`.
 4. **Program interpreter** — executes stored motion programs from external
    SRAM. Entry points [BYTE][SIM]: `prog_prepare` **0x0803** (label-table
    preprocessor: records each `MARK` opcode `0x1F` as a 2-byte PC in the

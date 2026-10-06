@@ -255,11 +255,35 @@ mode, etc. Each returns a program-operation **status byte** (`0xF6` / `0xF2` /
 
 > Provenance: the SRAM program store, the `0x81` block-store transport, the
 > program-loaded flag, and the system-command routing are **[SIM]** verified;
-> the shared-store claim is **[HW-doc]** (Teachbox README). The exact **program
-> instruction byte format** (what the interpreter at `0x0802`/`0x0A33` decodes
-> per stored byte) is **[INFER]** — not yet reverse-engineered. So you *can*
-> upload bytes into the program store and trigger execution over RS-232, but the
-> on-wire encoding of each instruction is not yet documented here.
+> the shared-store claim is **[HW-doc]** (Teachbox README). The **program
+> instruction byte format** (what the interpreter at `0x0941`/`0x0A33` decodes
+> per stored byte) is now **reverse-engineered and [SIM]-verified** — see the
+> "Stored-program instruction encoding" table below. You can upload a program
+> over RS-232 (0x81 block), the firmware stores it to SRAM byte-exact and marks
+> it loaded (`0x28.1`), and running it executes the uploaded instructions
+> (verified end-to-end in `tools/tbps-compiler`).
+
+### Stored-program instruction encoding  [SIM]
+Each stored instruction occupies a fixed **8-byte slot** (`prog_exec` advances
+`PC += 8`). The opcode reuses the RS-232 command bit fields; operands follow in
+the slot. Verified against the ROM in ucSim (`tools/tbps-compiler`):
+
+| TBPS instruction | Opcode | Operands (in slot) | Effect | Prov. |
+|:-----------------|:-------|:-------------------|:-------|:------|
+| `MARK m` | `0x1F` | `m` | label def (recorded in page-0x80 table by the preprocessor) | [SIM] |
+| `POS a . n` | `0x60 + (a-1)` | `n` | MOVE: `target[0x40+axis] = n`, arms motion mask `0x2B/0x2C` | [SIM] |
+| `POS` (store all) | `0x07` | 6 bytes | all-axes set-position (`position[0x50..]`) | [INFER] |
+| `TIM t` | `0x18` | `t` lo, `t` hi | delay -> `0x1A/0x1B` | [SIM] |
+| `OUT k +/-` | `0x10 + (k-1)&3` | state (`+`=0x00 LOW, `-`=0x01 HIGH) | digital out via `portb_write` (0x07D3) | [SIM] |
+| `GOTO m [. n]` | `0x30` | `m`, `n` | jump / loop (resolves label via `prog_goto` 0x0A33) | [INFER] |
+| `IF i [. m]` | `0x20` | mask `1<<(i-1)`, `m` | input test / branch | [INFER] |
+| `INS .` (END) | any bit7-set (`0x80`) | — | program end (`prog_exec` 0x094D) | [SIM] |
+| `DEL .` (HALT) | `0x36` | 3-byte special | halt / program separator | [INFER] |
+| `STOP 0`, `CLR` | — | — | header / mode-change: NO stored byte | [BYTE] |
+
+A ROM-faithful compiler for this encoding (lexer/parser/codegen + ucSim
+verification of both the direct-SRAM-load and RS-232-0x81-upload paths) lives in
+`tools/tbps-compiler`.
 
 ### Program memory map & size  [BYTE][SIM]
 Programs live in the external **HM6264 8 KB SRAM** (`hardware/board/sram.md`),
@@ -287,8 +311,10 @@ figures; our ROB3 ROM uses the 8-bit position range and the page layout above.
 | `0x0A33` | **label → PC resolver** (`GOTO m` / `RUN m`): 2-byte label table at page `0x3E`, result into `0x66:0x67` |
 | `0x08FF` | **motion executor** — called every main-loop pass (`0x0797`) to advance axis motion |
 
-The stored-program instruction encoding decoded by these routines is **[INFER]**
-(the reverse-engineering of the per-instruction byte format is future work).
+The stored-program instruction encoding decoded by these routines is
+**[SIM]-verified** — see "Stored-program instruction encoding" above and
+`tools/tbps-compiler`. The exact operand ordering for `GOTO`/`IF` within a slot
+remains partly **[INFER]**.
 
 ---
 

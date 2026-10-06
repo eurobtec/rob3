@@ -185,8 +185,22 @@
 ; This pass annotates the AXIS-SELECT / POSITION-mode entry — the code behind
 ; the manual's "press a numeric key 1..6 to select the axis, then jog it with
 ; +/-" and the "POS a . n ENT" positioning command. Other command handlers
-; (MARK/GOTO/IF/OUT/TIM, RUN/STOP, editor) are reached from the same dispatch
-; but are NOT annotated here and are flagged [INFER].
+; (MARK/GOTO/IF/OUT/TIM, RUN/STOP, editor) are reached from the same dispatch;
+; their per-instruction operand/commit details are still [INFER], EXCEPT the
+; PROGRAM-STORE path, which is now [SIM]-verified (see below).
+;
+; PROGRAM TYPING (keypad -> stored program)  [SIM]
+;   Typing an instruction and pressing ENT writes its opcode into the external-
+;   SRAM program body at the program PC (0x66:0x67) via the store at L_0DA5
+;   (mov DPL,0x66 / mov DPH,0x67 / movx @DPTR,A), then advances the PC one
+;   8-byte slot and updates the SRAM header. Verified end-to-end in ucSim
+;   (teachbox+loopback+adc, from the main loop): tapping MARK, 0, ENT stores
+;   opcode 0x1F at 0x8100 and advances the PC 0x8100 -> 0x8108 — matching the
+;   program interpreter's encoding (program.asm) and the TBPS compiler
+;   (tools/tbps-compiler). Key index = row+1 + (group-1)*8 (row = 74LS138 /Y,
+;   group = P1 column 1..3); ENT = index 0x0E = (row 5, group 2). Entry needs
+;   the program PC/pages (0x3E=0x80,0x3F=0x81) + INPUT mode set up by the
+;   STOP-0 header. Test: simulator/tests/test_teachbox_typing.py.
 ;
 ; IMPORTANT byte-vs-bit note: `jb 0x57` / `jb 0x56` use BIT addresses, i.e.
 ; bit 0x57 = byte 0x2A bit 7, bit 0x56 = byte 0x2A bit 6, and `setb 0x57`,
@@ -589,10 +603,23 @@ L_0D8E:
         mov @R1, 0x6D                       ; A7 6D  0D9F
         acall 0x0E38                        ; D1 38  0DA1
         ajmp 0x0C84                         ; 81 84  0DA3
+;
+;==============================================================================
+; PROGRAM STORE  (L_0DA5) — write a typed instruction into the SRAM program    [SIM]
+;   body at the program PC and advance it.
+;   DPTR := program PC (0x66:0x67); movx @DPTR,A stores the opcode (A, from the
+;   staged instruction); the following block appends operand bytes from the
+;   editor buffers (0x50.. / 0x6C/0x6D depending on the instruction class),
+;   zero-pads to the 8-byte slot (L_0DE1), then writes 0x66:0x67 back and the
+;   SRAM header. Verified [SIM]: typing MARK,0,ENT stores 0x1F at 0x8100 and
+;   advances the PC to 0x8108 (see simulator/tests/test_teachbox_typing.py and
+;   the header note above). This is the SAME store the serial 0x81 uploader and
+;   the program interpreter (program.asm) use — one program store, two inputs.
+;==============================================================================
 L_0DA5:
-        mov 0x82, 0x66                      ; 85 66 82  0DA5
-        mov 0x83, 0x67                      ; 85 67 83  0DA8
-        movx @DPTR, A                       ; F0  0DAB
+        mov 0x82, 0x66                      ; 85 66 82  0DA5  DPL = program PC lo
+        mov 0x83, 0x67                      ; 85 67 83  0DA8  DPH = program PC hi
+        movx @DPTR, A                       ; F0  0DAB        store opcode A -> SRAM[PC]  [SIM]
         inc DPTR                            ; A3  0DAC
         mov R1, #0x6C                       ; 79 6C  0DAD
         mov R6, #0x01                       ; 7E 01  0DAF
@@ -629,13 +656,13 @@ L_0DDC:
         inc DPTR                            ; A3  0DDE
         djnz R6, L_0DDB                     ; DE FA  0DDF
 L_0DE1:
-        clr A                               ; E4  0DE1
-        movx @DPTR, A                       ; F0  0DE2
-        inc DPTR                            ; A3  0DE3
-        mov A, 0x82                         ; E5 82  0DE4
+        clr A                               ; E4  0DE1  zero-pad the rest of the
+        movx @DPTR, A                       ; F0  0DE2  8-byte slot (DPL low 3 bits
+        inc DPTR                            ; A3  0DE3  != 0) so the next instr is
+        mov A, 0x82                         ; E5 82  0DE4  slot-aligned (PC += 8)
         anl A, #0x07                        ; 54 07  0DE6
         jnz L_0DE1                          ; 70 F7  0DE8
-        mov 0x66, 0x82                      ; 85 82 66  0DEA
+        mov 0x66, 0x82                      ; 85 82 66  0DEA  program PC := advanced DPTR  [SIM]
         mov 0x67, 0x83                      ; 85 83 67  0DED
         ajmp 0x0C84                         ; 81 84  0DF0
 L_0DF2:

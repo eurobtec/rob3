@@ -1,0 +1,31 @@
+# GNU nano syntax highlighting for the ROB3 Teach Box Programming System (TBPS).
+# Install: see ../README.md ("Editor support"). Typically:
+#   include "/path/to/tools/tbps-compiler/editors/nano/tbps.nanorc"
+# in your ~/.nanorc (or copy this file somewhere nano includes).
+
+syntax tbps "\.tbps$" "\.tb$"
+comment ";"
+
+# Instruction mnemonics.
+color brightblue "\<(MARK|POS|TIM|GOTO|IF|OUT|NOP)\>"
+
+# Program-structure / mode commands.
+color magenta "\<(STOP|INS|DEL|CLR)\>"
+
+# The ENTER terminator.
+color cyan "\<ENT\>"
+
+# Numbers: hex (0x..) and decimal.
+color yellow "\<0[xX][0-9A-Fa-f]+\>" "\<[0-9]+\>"
+
+# Set/clear and direction operators.
+color brightred "[+-]"
+
+# The '.' parameter separator.
+color green "\."
+
+# Comments: ';' or '#' to end of line.
+color brightblack "(;|#).*$"
+
+# Trailing whitespace.
+color ,green "[[:space:]]+$"
