@@ -72,7 +72,8 @@ def main(argv: list[str] | None = None) -> int:
         "ROM-faithful program image.",
     )
     ap.add_argument("--version", action="version", version=f"tbpsc {__version__}")
-    ap.add_argument("source", nargs="?", help="TBPS source file (.tbps / .txt)")
+    ap.add_argument("source", nargs="?",
+                    help="TBPS source file (.tbps primary; .dat/.tb/.txt accepted)")
     ap.add_argument("-o", "--output", help="output binary (default: stdout hex)")
     ap.add_argument(
         "--label-table",

@@ -170,7 +170,8 @@ Lower level, you can still use ucSim breakpoints on the interpreter directly
 ## Editor support
 ### Vim / Neovim syntax highlighting
 
-Syntax + filetype files for `.tbps` (and `.tb`) live in `editors/vim/`.
+Syntax + filetype files for `.tbps` (primary) and the `.tb` / `.dat` aliases
+live in `editors/vim/`.
 
 Install (classic Vim):
 
@@ -208,8 +209,9 @@ include "/path/to/rob3/tools/tbps-compiler/editors/nano/tbps.nanorc"
 ```
 
 (Or copy it into nano's include dir, e.g. `/usr/share/nano/` or
-`~/.nano/`.) It activates for `*.tbps` / `*.tb` files and colours the same token
-classes as the Vim definition.
+`~/.nano/`.) It activates for `*.tbps` / `*.tb` / `*.dat` files and colours the
+same token classes as the Vim definition. (`.dat` is generic — drop it from the
+`syntax` line / ftdetect if it clashes with other `.dat` files.)
 
 ## Documentation map
 

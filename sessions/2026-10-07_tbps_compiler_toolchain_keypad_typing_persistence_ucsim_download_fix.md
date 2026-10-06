@@ -96,8 +96,15 @@ repro) and indexed.
 - `hardware/teachbox/SOURCES.md` marks `teachbox.md` (owner-maintained, renamed
   from README.md + extended) and `tbps.md` (verbatim PDF extraction) **read-only**
   for tooling; lists derived/editable files.
-- `hardware/teachbox/hello_world.txt` cleaned (compiles with `tbpsc`; fixed the
-  wrong "TIM 50 = 0.5 s" comment → 5 s).
+- `hardware/teachbox/hello_world.{txt→tbps}` cleaned (compiles with `tbpsc`;
+  fixed the wrong "TIM 50 = 0.5 s" comment → 5 s) and renamed to the primary
+  source extension.
+- **File-extension convention** settled: **`.tbps`** primary source, **`.dat`**
+  alias (the original TBPS convention — TBINIT's example `TB.CNF` extension),
+  **`.ACT`** = compiled program (original Teach Box binary format). Applied
+  across the CLI help, Vim `ftdetect` + nano syntax (`.tbps`/`.tb`/`.dat`),
+  `docs/TBPS_LANGUAGE.md` (File extensions table), and the README. Vim/nano
+  highlighting loading + verification documented and headless-tested.
 - `hardware/host/command.md`: stored-program instruction encoding upgraded from
   [INFER] to a [SIM] table.
 - The old `hardware/teachbox/tbps_compiler.py` + `program_loader.py` (fabricated

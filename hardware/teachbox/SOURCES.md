@@ -16,7 +16,7 @@ Derived / editable material in this directory:
 | File | Status |
 |:-----|:-------|
 | `language.md` | derived grammar sketch (points to the verified spec) |
-| `hello_world.txt` | hand-written example program (editable) |
+| `hello_world.tbps` | hand-written example TBPS program (editable) |
 
 > The former `tbps_compiler.py` / `program_loader.py` here used **fabricated
 > opcodes** and have been **removed** — use `../../tools/tbps-compiler`

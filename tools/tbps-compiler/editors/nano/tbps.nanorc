@@ -3,7 +3,7 @@
 #   include "/path/to/tools/tbps-compiler/editors/nano/tbps.nanorc"
 # in your ~/.nanorc (or copy this file somewhere nano includes).
 
-syntax tbps "\.tbps$" "\.tb$"
+syntax tbps "\.tbps$" "\.tb$" "\.dat$"
 comment ";"
 
 # Instruction mnemonics.

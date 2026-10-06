@@ -31,6 +31,21 @@ integer    = decimal | "0x" hex ;
   docs/`.txt` files compile unchanged.
 - Mnemonics are case-insensitive.
 
+### File extensions
+
+| Extension | Role |
+|:----------|:-----|
+| **`.tbps`** | TBPS **source** — the primary, recommended extension |
+| `.dat` | source **alias** — the original TBPS convention (TBINIT's example `TB.CNF` extension for control programs; the extension was user-configurable, 3 chars) |
+| `.tb`, `.txt` | also accepted as source by the compiler |
+| **`.ACT`** | **compiled program** — the original Teach Box binary program format (what `TBKONV` produced automatically); use for the compiled body/image when interoperating with original TBPS files |
+| `.bin` / `.sram` / `.asm` | this compiler's outputs: body / full SRAM image / native 8051 asm |
+
+The original DOS **TBPS** software stored PC-side control programs with a
+user-chosen 3-character extension (TBINIT, example `dat`) and the robot/Teach
+Box program files as `.ACT`. We adopt `.tbps` as the clear primary with `.dat`
+as the authentic alias, and reserve `.ACT` for the compiled program.
+
 ---
 
 ## 2. Grammar (EBNF)
