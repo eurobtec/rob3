@@ -149,6 +149,31 @@ P3.2 HIGH** — i.e. all three firmware gates are satisfied and the ROM reaches
 "all gates open" state and the ROM reaches the Teachbox poll from a plain
 `reset; run`. [SIM]
 
+### Simulation status — what the `loopback` module does and does NOT prove
+
+The `loopback` cl_hw module
+(`../../simulator/ucsim-modules/loopback/`) is the simulator's stand-in for the
+shorting connector, but be precise about its scope:
+
+- ✅ **Proven [SIM]:** forcing **P3.2 + P3.4 HIGH** lets the ROM escape the
+  emergency-off handler (0x0040) and pass the `JB P3.4,tb_poll` gate at 0x07AB,
+  so the keypad scanner runs. The *end-state* that unblocks the Teachbox is
+  verified.
+- ❌ **NOT proven:** that the candidate plug wiring (**DB9 pins 2,4 → pin 5/GND**)
+  actually produces that end-state. The module drives the **8031 P3.2/P3.4 pins
+  directly**; it does **not** drive the DB9 pins through the MM74C04N inversion,
+  so the connector's electrical path is never exercised.
+- ⚠ **Scope caveat:** the module also forces **P3.2 (emergency-off) HIGH**, but
+  P3.2 is set by the **DB25 STOP path, not the DB9 connector** (see the gates
+  section above). Forcing it is a sim convenience (run without a STOP model),
+  **not** something the shorting connector does. Do not read "loopback passes"
+  as "the DB9 plug drives P3.2."
+
+So the simulation confirms the gates-HIGH end-state unblocks the Teachbox, but
+the **actual plug wiring remains [INFER]** — only a wiring-accurate sim (drive
+DB9 2,4→GND through the inverter) or a bench buzz-out of the genuine plug would
+promote it to verified.
+
 This is the real, now-sharpened contradiction: **the documented board does not
 need a shorting connector to run the Teachbox, yet the manual requires one and a
 bench loopback left it blocked.** Pin 2 additionally must stay **open** so it can
