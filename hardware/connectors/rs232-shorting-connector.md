@@ -99,50 +99,85 @@ Traced across `rs232.md`, `../board/MM74C04N.md`, `../board/M34004.md`,
   `rs232.md` pins-2/3/5 theory) is **confirmed insufficient**. The 422/485
   differential pairs are meaningless on this DB9.
 
-## TODO — resolve before building the plug  [INFER]
+## Full DB9 pinout — now reconciled across all board docs  [HW-doc]
 
-The trace produced a genuine contradiction that ONE bench measurement settles:
+The DB9 pinout in `rs232.md` has been completed and cross-checked against
+`../board/MM74C04N.md` and `../board/M34004.md`. The two conditioning inputs
+(pins 2 and 4) share the **identical** network:
 
-- **The documented conditioning cannot be driven by any documented DB9 short.**
-  Per `MM74C04N.md`, IN4 has a 100 kΩ **pulldown** to GND, so DB9 pin 4 open →
-  IN4 LOW → P3.4 HIGH → gate already open → no plug needed. That contradicts
-  BOTH the manual ("connector required") AND the bench result (Teachbox still
-  blocked). One of the doc's assumptions is therefore wrong.
+```text
+DB9 pin 2 ──[10 kΩ]──┬── MM74C04N #1 IN 6 (chip pin 13) ──(inv)──> OUT 6 (pin 12) ─> P3.0/RXD
+                     └──[100 kΩ]── GND
 
-- **Leading hypothesis (buildable, matches all evidence):** the resistor on the
-  IN4 node is actually a **pull-UP to +5V**, not a pulldown (note
-  `resistor-pullup-array.md` shows these nodes tied `o-- Vcc`). Then:
-  - pin 4 open → IN4 HIGH → **P3.4 LOW → gate CLOSED → Teachbox blocked** ✓ (matches symptom)
-  - plug shorts **DB9 pin 4 → pin 5 (GND)** → IN4 forced LOW → **P3.4 HIGH → gate OPEN** ✓
-  If confirmed, the shorting connector is simply **pin 4 ↔ pin 5**, possibly
-  with **2↔3** as well for the serial idle. This uses only documented pins and
-  needs no +5V source.
+DB9 pin 4 ──[10 kΩ]──┬── MM74C04N #1 IN 4 (chip pin 9)  ──(inv)──> OUT 4 (pin 8)  ─> P3.4/T0
+                     └──[100 kΩ]── GND
+```
 
-- **Alternative hypotheses still open:**
-  1. The connector's real purpose is the **RXD/baud path** on pin 2 (P3.0),
-     and P3.4 is asserted by a route not captured in the docs.
-  2. There IS an undocumented +5V on DB9 pin 1/6/7/8 and the plug straps pin 4
-     to it (pin 4 needs to go HIGH, not LOW).
+Both are **100 kΩ pulldown** nodes (the `resistor-pullup-array.md` SIP array
+does **not** list MM74C04N #1 pin 9 or pin 13 — only pins 1/3/5 — so IN4/IN6
+are NOT pulled up). The earlier "IN4 is a pull-up to +5V" hypothesis is
+therefore **closed**: the pulldown is now drawn explicitly on both pins in
+`rs232.md`.
 
-- **The single measurement that decides it** (RS-232 port empty, powered, just
-  after RESET, meter to GND):
-  1. 8031 **pin 14 (P3.4)** — HIGH or LOW? (Expect LOW if the gate is closed.)
-  2. DB9 **pin 4** — voltage? (Near +5V ⇒ pull-up ⇒ strap pin 4→GND.
-     Near 0 V ⇒ pulldown ⇒ the docs' polarity holds and something else is wrong.)
-  3. Probe DB9 **pins 1, 6, 7, 8** for any **+5V** (would enable a pin-4→VCC strap).
+## Firmware init branches on these pins  [BYTE][SIM]
 
-  Then the plug is one solder bridge:
-  - pin 4 reads ~+5V (pull-up) → **bridge DB9 pin 4 ↔ pin 5 (GND)**.
-  - a spare pin reads +5V and pin 4 must go HIGH → **bridge pin 4 ↔ that pin**.
+Verified against the ROM (`../../firmware/src/annotated/init.asm`,
+`main.asm`):
 
-- **Doc discrepancy to fix:** `rs232.md` (pins 2/3/5 only) vs `MM74C04N.md`
-  (pin 4 used) vs `resistor-pullup-array.md` (nodes to Vcc). Reconcile the
-  IN4/IN6 resistor as pull-up vs pulldown once measured — that is the root
-  ambiguity behind this whole question.
+| 8031 pin | DB9 pin OPEN → level | firmware consequence |
+| :------- | :------------------- | :------------------- |
+| **P3.0 / RXD** | HIGH (pulldown → IN6 LOW → inv HIGH) | `jb P3_RXD,baud_detect` (`20 B0 07`) → **auto-baud path** (the only working one: arms UART with ES, starts T1). P3.0 LOW would take the fixed-baud path that never sets ES/TR1 → serial dead. |
+| **P3.4 / T0** | HIGH (same inversion) | `jb P3_T0,tb_poll` (`20 B4 16`) → keypad **scanned** (gate OPEN). P3.4 LOW skips the poll. |
+| **P3.2 / INT0** | HIGH (via DB25 STOP pullup, not DB9) | not emergency-off; main loop runs. |
 
-**Provenance:** DB9→MM74C04N/M34004 wiring, the `JB P3.4` gate, and the
-"2↔3 doesn't work" result are **[BYTE]/[HW-doc]/[HW-bench]**; the resulting
-strap (pin 4↔5 vs pin 4↔+5V) is **[INFER]** until the measurement above.
+**Consequence of the completed trace:** with the RS-232 port **empty** (all DB9
+pins open), the documented wiring already yields **P3.0 HIGH + P3.4 HIGH +
+P3.2 HIGH** — i.e. all three firmware gates are satisfied and the ROM reaches
+`tb_poll` with no connector. The `loopback` cl_hw module reproduces exactly this
+"all gates open" state and the ROM reaches the Teachbox poll from a plain
+`reset; run`. [SIM]
+
+This is the real, now-sharpened contradiction: **the documented board does not
+need a shorting connector to run the Teachbox, yet the manual requires one and a
+bench loopback left it blocked.** Pin 2 additionally must stay **open** so it can
+carry live RXD edges for auto-baud — so the connector cannot simply DC-short
+pin 2 to anything.
+
+## Remaining ambiguity — one bench measurement settles it  [INFER]
+
+Two internally-consistent explanations remain; both are decided by probing the
+real board:
+
+1. **Floating-input hypothesis (most likely).** The physical pulldowns are
+   absent/weak, so the CMOS inputs IN4/IN6 **float** when the port is open
+   (illegal for CMOS). The plug exists to **tie them to a defined level** —
+   grounding pin 4 (and giving pin 2 a defined idle) via **pin 5 (GND)** — so
+   the gates read deterministically. Plug = **DB9 pins 4 (and/or 2) ↔ pin 5**.
+2. **Undocumented route.** P3.4 is driven LOW on the real board by a path not in
+   these docs, and the plug forces it HIGH. Only a probe reveals it.
+
+**The single measurement** (RS-232 port empty, powered, just after RESET,
+meter to GND):
+1. 8031 **pin 14 (P3.4)** and **pin 10 (P3.0)** — HIGH or LOW?
+   - Both HIGH ⇒ docs are right, connector is for signal-integrity / defined
+     idle only → safe plug is **pins 4 (±2) ↔ 5 (GND)**.
+   - Either LOW ⇒ a real-board route pulls it down → the plug must drive it;
+     probe for the source.
+2. DB9 **pin 4** voltage — ~0 V (pulldown, docs hold) or ~+5 V (pull-up).
+3. Probe DB9 **pins 1, 6, 7, 8** for any **+5V** (would enable a pin-4→VCC strap).
+4. Buzz out the **genuine ROB3 shorting plug** pin-to-pin — that directly yields
+   the strap map and ends the ambiguity.
+
+**Candidate plug to build/test first (uses only documented pins, no +5V
+needed):** short **DB9 pin 4 → pin 5 (GND)**, optionally **pin 2 → pin 5** too.
+Note this is explicitly **not** the 2↔3 data loopback that was bench-tested and
+**failed** — that plug never grounds pins 2/4, which is consistent with why it
+did not unblock the Teachbox.
+
+**Provenance:** DB9→MM74C04N/M34004 wiring, both init branches (`jb P3_RXD`,
+`jb P3_T0`), and the "2↔3 doesn't work" result are **[BYTE]/[HW-doc]/[HW-bench]**;
+the resulting strap (pins 4,2 ↔ 5/GND) is **[INFER]** until the measurement
+above.
 
 ## How to verify on the bench
 
