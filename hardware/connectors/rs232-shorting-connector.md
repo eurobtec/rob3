@@ -36,14 +36,14 @@ From `../board/MM74C04N.md` (MM74C04N #1) and `rs232.md`:
 | 2 | IN 6 (pin 13) | 10 kΩ | 100 kΩ → GND | OUT 6 (pin 12) | P3.0 / RXD (pin 10) | serial RX / baud strap |
 | 3 | OUT 1 of M34004 | — | — | (TX driver out) | P3.1 / TXD (pin 11) | serial TX (host RX) |
 | 4 | IN 4 (pin 9) | 10 kΩ | 100 kΩ → GND | OUT 4 (pin 8) | P3.4 / T0 (pin 14) | teach-poll enable gate |
-| 5 | **M34004 OUT4** (NOT system GND — see note) | — | — | (driver out, P3.5/T1 in) | — | driven ref level |
+| 5 | Signal GND (≈0 V, buffered by M34004 OUT4) | — | — | (ref buffer) | — | serial Signal Ground |
 
-> **⚠ Pin 5 is NOT system ground.** It is fed by **M34004 pin 14 (OUTPUT 4)**, a
-> ±9 V inverting driver whose input is 8031 P3.5/T1. The firmware uses T1 only
-> as the baud generator (TMOD=0x21) and never toggles P3.5, so pin 5 sits at a
-> **static driven level** that merely *acts* as the serial reference. Any plug
-> idea below that "shorts to pin 5 (GND)" must be re-evaluated — see
-> `rs232.md`. [BYTE][HW]
+> **Pin 5 is Signal Ground (≈0 V) but buffered, not a bare GND tie.** It is fed
+> by **M34004 pin 14 (OUTPUT 4)**, which buffers the op-amp array's 0 V
+> reference and presents it as the serial ground the PC mates to. It therefore
+> **is** usable as the ground strap target below — but it is a buffered node, so
+> **confirm it reads ≈0 V with a meter** before relying on it to sink current
+> from a strap. See `rs232.md` / `../board/M34004.md`. [HW trace; 0 V INFER until metered]
 
 Each conditioning input (pins 2 and 4) has a **100 kΩ pulldown to GND** and a
 **10 kΩ series resistor** to the DB9 pin. So:
