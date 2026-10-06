@@ -81,7 +81,7 @@ Traced across `rs232.md`, `../board/MM74C04N.md`, `../board/M34004.md`,
 
 | DB9 pin | Connection on the ROB3 board | Usable as a strap target? |
 | :------ | :--------------------------- | :------------------------ |
-| 1 | (no documented connection) | unknown — probe it |
+| 1 | **GND** (confirmed) | yes (ground, tied with pin 5) |
 | 2 | MM74C04N #1 IN6 (10k) → P3.0/RXD | yes (serial path) |
 | 3 | M34004 OUT1 ← robot TXD | it's a driver OUTPUT |
 | 4 | MM74C04N #1 IN4 (10k) → P3.4/T0 poll gate | **yes — the gate of interest** |
@@ -94,15 +94,13 @@ Traced across `rs232.md`, `../board/MM74C04N.md`, `../board/M34004.md`,
 **Hard conclusions from the trace:**
 
 - **Pins 6, 7, 8 are not connected** (confirmed) and **pin 9 is cut**. So the
-  only live pins on this DB9 are **1 (unknown), 2, 3, 4, 5**.
-- **No DB9 pin carries +5V** in any board doc, and pins 6/7/8 are now ruled out
-  as a hidden +5V source. The only remaining unknown that could carry +5V is
-  **pin 1** — probe it. Absent that, there is **no +5V on this connector**, so a
-  passive plug **cannot** strap pin 4 to +5V; the only defined level available
-  to a plug is **pin 5 (Signal GND ≈0 V)**.
+  only live pins on this DB9 are **1 (GND), 2, 3, 4, 5 (GND)**.
+- **No DB9 pin carries +5V.** Pin 1 is GND, pins 6/7/8 are n/c, pin 9 is cut.
+  So a passive plug **cannot** strap pin 4 to +5V; the only defined levels
+  available to a plug are the two **ground** pins (**1 and 5**).
 - Therefore any shorting plug can only connect among **pins 1/2/4/5** (pin 3 is
-  a driver output, don't short it). With pin 1 unknown, the only
-  documented-safe strap targets are **pins 2, 4 → pin 5 (GND)**.
+  a driver output, don't short it). The documented-safe strap targets are
+  **pins 2, 4 → ground (pin 5 or pin 1)**.
 
 ## Bench evidence so far  [HW-bench]
 
@@ -218,7 +216,8 @@ meter to GND):
    - Either LOW ⇒ a real-board route pulls it down → the plug must drive it;
      probe for the source.
 2. DB9 **pin 4** voltage — ~0 V (pulldown, docs hold) or ~+5 V (pull-up).
-3. Probe DB9 **pins 1, 6, 7, 8** for any **+5V** (would enable a pin-4→VCC strap).
+3. (Pins 1/5 are GND, 6/7/8 n/c, 9 cut — so there is **no +5V on the DB9**; a
+   pin-4→VCC strap is not possible with a passive plug.)
 4. Buzz out the **genuine ROB3 shorting plug** pin-to-pin — that directly yields
    the strap map and ends the ambiguity.
 
@@ -236,19 +235,19 @@ above.
 ## What the plug looks like — build summary  [INFER, pending bench confirm]
 
 With the connector now fully inventoried — **pins 6/7/8 not connected, pin 9
-connected-but-cut on the PCB, pin 5 = Signal GND (≈0 V), pin 3 = a driver
-output (never short), pin 1 = still unknown** — the only pins a passive plug
-can legitimately bridge are **2, 4, and 5**. That yields a simple solder-bridge
-plug inside a DB9 shell, no components:
+connected-but-cut on the PCB, pin 5 = Signal GND (≈0 V), pin 1 = GND, pin 3 =
+a driver output (never short)** — the only pins a passive plug can legitimately
+bridge are **2, 4, and the ground pins (5 / 1)**. That yields a simple
+solder-bridge plug inside a DB9 shell, no components:
 
 ```text
    ROB3 RS-232 shorting connector (DB9), candidate wiring
    ------------------------------------------------------
          pin 2 (→ P3.0/RXD gate) ──┐
                                     ├── pin 5  (Signal GND, ≈0 V)
-         pin 4 (→ P3.4/T0  gate) ──┘
+         pin 4 (→ P3.4/T0  gate) ──┘   (pin 1 is also GND — same net)
 
-   pin 1  : unknown — PROBE before trusting (could be a 2nd GND or +5V)
+   pin 1  : GND
    pin 3  : robot TXD driver OUTPUT — DO NOT short
    pin 6  : n/c
    pin 7  : n/c
@@ -276,8 +275,8 @@ failed. The 2-minute bench measurement in the next section resolves it:
   correct and necessary.
 - If they read **HIGH** already → the plug's role is only to define the idle
   level (still **pins 2,4 → 5**, harmless and sufficient).
-- Also **probe pin 1** — if it is a second GND, add it to the pin-5 bridge; if
-  it is +5 V, the strap polarity may need rethinking.
+- Pin 1 is also GND (same net as pin 5), so it is an equivalent ground point if
+  convenient for the plug layout.
 - Best of all: **buzz out the genuine ROB3 plug** pin-to-pin — that ends the
   [INFER] immediately.
 
