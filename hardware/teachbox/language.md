@@ -1,16 +1,5 @@
 # TBPS Language Formal Description
 
-> **Note — authoritative spec with the verified byte encoding:**
-> This document is the original grammar/semantics sketch. The **byte-level
-> program encoding** (opcodes, 8-byte slots, SRAM layout) and the
-> static/runtime corner-case semantics are reverse-engineered and
-> **[SIM]-verified** in
-> [`tools/tbps-compiler/docs/TBPS_LANGUAGE.md`](../../tools/tbps-compiler/docs/TBPS_LANGUAGE.md),
-> which the `tbps-compiler` implements and tests against the ROM in ucSim.
-> (The former ad-hoc `tbps_compiler.py` in this directory used a **fabricated**
-> opcode table and has been removed.)
-> Use this file for the language overview; use the tools/ spec for exact bytes.
-
 ## 1. Lexical Tokens and Value Ranges
 *   **Keywords / Instructions:** `MARK`, `POS`, `TIM`, `GOTO`, `IF`, `OUT`, `STOP`, `INS`, `DEL`, `CLR`, `ENT`.
 *   **Separators:** 

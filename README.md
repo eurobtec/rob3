@@ -48,6 +48,15 @@ What exists in this repository today:
   client. **Its own repository:**
   [eurobtec/rob3_ucsim](https://github.com/eurobtec/rob3_ucsim) (the behavioral
   `simulator/tests/` and the `cl_hw` modules stay here).
+- **TBPS compiler toolchain** — a ROM-faithful compiler, disassembler,
+  source-level debugger, and native-8051 backend for the **Teach Box
+  Programming System** language the robot runs from its SRAM program store.
+  Every opcode is `[SIM]`-verified against this ROM in ucSim (direct SRAM load,
+  RS-232 `0x81` upload-and-run, `0x80` readback, and native==interpreter
+  equivalence). **Its own repository:**
+  [eurobtec/tbps_compiler](https://github.com/eurobtec/tbps_compiler) (the
+  interpreter equates `firmware/src/annotated/inc/program.inc` and the
+  keypad-typing test `simulator/tests/test_teachbox_typing.py` stay here).
 - **Arduino bench bring-up rigs** that recreate the teachbox and a single robot
   axis to confirm hardware claims independently of the 8031.
 - **Domain skills & steering** under `.kiro/` capturing the MCS-51 / ucSim /

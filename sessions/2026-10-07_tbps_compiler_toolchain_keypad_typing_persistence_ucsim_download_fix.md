@@ -115,3 +115,48 @@ Byte encoding, 8-byte slot, label table, upload/readback/typing/persistence, and
 native equivalence are [BYTE]/[SIM] against the project's own `ucsim_51` build
 and ROM; GOTO/IF operand ordering and the keypad per-instruction commit
 sequences remain [INFER].
+
+---
+
+## Addendum — proving the remaining [INFER] items, axis speed, and extraction
+
+A follow-on push to close out TBPS "so we don't return to it."
+
+### GOTO/IF opcodes were WRONG — corrected and [SIM]-verified
+Proving (not inferring) the branch opcodes exposed a real compiler bug: GOTO=0x30
+/ IF=0x20 **do not branch** (the firmware branch handler at 0x09F1→L_0A0C is
+only reached for op≥0x32 with .5=1,.4=1,.3=0 via `add A,#0xCE/jc`). Verified by
+sweep + classification: **GOTO=0x34** (operand[0]=label; GOTO 0→0x8100, 2→0x8120,
+5→0x8118), **GOTO-counted=0x36**, **IF=0x32** (op[0]=label, op[1]=mask; jump when
+`(mask&P1)==0`). Fixed isa/codegen/disasm; hardened the debugger (skip MARK;
+break at prog_goto RET 0x0A41) and simload. Propagated to all docs + the skill.
+
+### Axis travel speed added (was missing)
+Verified the firmware move+speed class `0x70+axis` (`0x71 0x80 0x03` →
+target[0x41]=0x80, speed[0x71]=3). Added `POS a . n , s` (speed 1..5) across
+parser/codegen/disasm/native + tbps_isa.inc; lexer accepts `,`.
+
+### Keypad typing + STOP
+Fresh-state probes: MARK 0 ENT→0x1F, GOTO 0 ENT→0x34 (keypad cross-check of the
+opcode fix), TIM 0 ENT→0x19. The per-instruction operand-entry→commit state
+machine (non-zero operands) stays [INFER]. STOP = a **soft reset of the editor/
+entry state** (not the CPU reset vector); `STOP 0 ENT` clears the program + builds
+the header, so seeding PC/pages/INPUT mode is a faithful stand-in.
+
+### Self-explanatory ISA header
+Added `asm/tbps_isa.inc` (TBPS opcodes + firmware RAM map + routine entries); the
+native backend emits `.include "tbps_isa.inc"` + symbolic names. Extended the
+authoritative firmware `inc/program.inc` with the full opcode set + prog_* entries
+(source of truth; tbps_isa.inc mirrors it).
+
+### Compiler extracted to its own repo
+Per project convention, the compiler is now **its own public repo:
+[eurobtec/tbps_compiler](https://github.com/eurobtec/tbps_compiler)** (named for
+the TBPS language, not ROB3-specific). The in-tree `tools/tbps-compiler/` is
+removed and replaced by a pointer README. What stays in this repo: the
+authoritative `firmware/src/annotated/inc/program.inc`, the keypad-typing test
+`simulator/tests/test_teachbox_typing.py`, and the firmware annotations/skill.
+`hardware/teachbox/` gains a directory README (owner docs marked read-only;
+`language.md` is owner-authored).
+
+Golden byte-match PASS throughout; compiler suite green in the new repo.
