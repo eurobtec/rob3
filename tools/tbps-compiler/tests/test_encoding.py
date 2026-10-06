@@ -87,9 +87,18 @@ def test_goto_class_bits():
         """
     )
     goto = prog.slots[1]
-    assert goto.opcode & isa.BIT5          # bit5 set (GOTO/IF class)
+    assert goto.opcode == 0x34             # GOTO unconditional (verified [SIM])
+    assert goto.operands[0] == 0           # operand[0] = label
+    assert goto.opcode & isa.BIT5          # bit5 set (branch class)
     assert not (goto.opcode & isa.BIT6)    # bit6 clear
     assert not (goto.opcode & isa.BIT7_END)
+
+
+def test_goto_counted_opcode():
+    prog = _slots("MARK 0\nGOTO 0 . 5")
+    g = prog.slots[1]
+    assert g.opcode == 0x36                # counted GOTO
+    assert g.operands == [0, 5]            # [label, count]
 
 
 def test_if_input_mask():
@@ -100,8 +109,9 @@ def test_if_input_mask():
         """
     )
     node = prog.slots[1]
-    assert node.operands[0] == (1 << 2)    # input 3 -> bit 2
-    assert node.operands[1] == 5           # label
+    assert node.opcode == 0x32             # IF (verified [SIM])
+    assert node.operands[0] == 5           # operand[0] = label
+    assert node.operands[1] == (1 << 2)    # operand[1] = input 3 -> bit 2 mask
 
 
 # --- label table (vs prog_goto 0x0A33) --------------------------------------

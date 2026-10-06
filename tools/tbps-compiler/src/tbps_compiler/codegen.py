@@ -163,27 +163,33 @@ def _slot_out(node: P.Out) -> Slot:
 
 
 def _slot_goto(node: P.Goto) -> Slot:
-    """GOTO m [. n]  ->  bit5 set, bit4 set, bit3 clear branch (0x09F1).  [INFER]
+    """GOTO m [. n]  ->  branch class (prog_exec 0x09F1 -> L_0A0C).  [SIM]
 
-    prog_exec 0x0A0C: ``movx -> R0`` (label m), ``inc DPTR``; for the counted form
-    (``jb 0x39``) it reads a count byte and decrements it in place.  Operands:
-    [label, count] -- count 0 marks the endless form.  [INFER]
+    operand[0] is the label (prog_goto 0x0A33 resolves it via the page-0x80
+    table).  Verified: GOTO 0 -> PC 0x8100, GOTO 2 -> 0x8120.
+      * unconditional GOTO  -> opcode 0x34, operand[0]=label.
+      * counted  GOTO m . n -> opcode 0x36 (counted path writes the counter back
+        into the slot); operand[0]=label, operand[1]=count.
     """
-    operands = [node.label & 0xFF, (node.count or 0) & 0xFF]
-    return Slot(isa.OP_GOTO | isa.BIT4, operands, node.line)
+    if node.count is None:
+        return Slot(isa.OP_GOTO, [node.label & 0xFF], node.line)
+    return Slot(isa.OP_GOTO_COUNTED,
+                [node.label & 0xFF, node.count & 0xFF], node.line)
 
 
 def _slot_if(node: P.If) -> Slot:
-    """IF i [. m]  ->  bit5 set branch (0x09F1 / 0x0A0C input-test path).  [INFER]
+    """IF i [. m]  ->  branch class 0x32 (prog_exec L_0A12 input-test).  [BYTE]
 
-    prog_exec 0x0A12/0x0A1C: reads an input-mask operand, ANDs/ORs against P1
-    (0x90), and on match resolves a label via prog_goto.  Operands:
-    [input_mask, label]; the wait form (``IF i``) has no label (loops in place),
-    which we encode with label 0.  [INFER]
+    From the decode: operand[0] = label (R0, resolved by prog_goto), operand[1] =
+    input mask; the firmware does ``anl A,P1`` and jumps when (mask & P1) == 0,
+    i.e. the masked input bit(s) are LOW (active-low inputs).  The wait form
+    ``IF i`` (no label) loops in place: encode label = this instruction's own
+    slot is not known here, so the parser's wait form uses label 0; callers that
+    need a true wait use ``IF i . <self-label>``.
     """
     input_mask = (1 << (node.inp - 1)) & 0xFF
     label = (node.label or 0) & 0xFF
-    return Slot(isa.OP_IF, [input_mask, label], node.line)
+    return Slot(isa.OP_IF, [label, input_mask], node.line)
 
 
 def _slot_mark(node: P.Mark) -> Slot:

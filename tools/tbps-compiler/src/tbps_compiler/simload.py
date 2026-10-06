@@ -48,14 +48,19 @@ def load_program(engine: Engine, prog: CompiledProgram, *, set_pages: bool = Tru
     """Write ``prog`` straight into the simulator's external SRAM (xram).
 
     Writes the full body (incl. zero padding, so no stale xram leaks into a
-    slot) and the non-zero label-table entries, then sets the page registers.
+    slot), zero-fills + writes the label table (so a label's zero bytes can't be
+    left as stale xram), then sets the page registers.
     """
     body = prog.body_bytes()
     for i, b in enumerate(body):
         engine.command("set mem xram 0x%04x 0x%02x" % (isa.SRAM_BODY_BASE + i, b))
-    for addr, b in prog.sram_writes():
-        if addr < isa.SRAM_BODY_BASE:        # label-table bytes (non-zero only)
-            engine.command("set mem xram 0x%04x 0x%02x" % (addr, b))
+    # Write the full label table (incl. zeros) so a label whose PC has a 0x00
+    # byte, or an undefined slot, is not left as stale xram (which would make
+    # prog_goto resolve to garbage).
+    table = prog.label_table_bytes()
+    highest = max((2 * lbl + 1 for lbl in prog.labels), default=-1)
+    for i in range(highest + 1):
+        engine.command("set mem xram 0x%04x 0x%02x" % (isa.SRAM_LABEL_BASE + i, table[i]))
     if set_pages:
         engine.command("set mem iram 0x%02x 0x%02x" % (IRAM_LABEL_PAGE, isa.SRAM_LABEL_PAGE))
         engine.command("set mem iram 0x%02x 0x%02x" % (IRAM_BODY_PAGE, isa.SRAM_BODY_PAGE))
@@ -66,13 +71,23 @@ def set_program_pc(engine: Engine, addr: int) -> None:
     engine.command("set mem iram 0x%02x 0x%02x" % (IRAM_PROG_PC_LO, addr & 0xFF))
     engine.command("set mem iram 0x%02x 0x%02x" % (IRAM_PROG_PC_HI, (addr >> 8) & 0xFF))
 
+PROG_GOTO_RET = 0x0A41    # prog_goto's own RET (branch instructions exit here,
+                          # not via PC_ADVANCE_RET)
+
 
 def run_one_instruction(engine: Engine, timeout: float = 15.0) -> str:
-    """Enter prog_exec and run until the end-of-instruction PC advance."""
+    """Enter prog_exec and run until the instruction completes.
+
+    Most instructions exit at the PC-advance RET (0x0A0B); a GOTO/IF that
+    *branches* resolves the label in prog_goto and exits at its RET (0x0A41).
+    Break at both so a branch doesn't free-run past into the jumped-to code.
+    """
     engine.command("pc 0x%04x" % PROG_EXEC)
     engine.command("break 0x%04x" % PC_ADVANCE_RET)
+    engine.command("break 0x%04x" % PROG_GOTO_RET)
     out = engine.run(timeout=timeout)
     engine.command("clear 0x%04x" % PC_ADVANCE_RET)
+    engine.command("clear 0x%04x" % PROG_GOTO_RET)
     return out
 
 

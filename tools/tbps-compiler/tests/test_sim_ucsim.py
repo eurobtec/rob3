@@ -466,3 +466,27 @@ def test_program_self_runs_from_main_loop():
         assert eng._dump_byte("iram", 0x40) == 128
     finally:
         eng.close()
+
+
+def test_goto_branches_to_label(engine):
+    """A compiled GOTO (opcode 0x34) resolves its label and sets the program PC
+    to that label's slot (verified correction: GOTO is 0x34, not 0x30)."""
+    # MARK 0, GOTO 5, POS (skipped), MARK 5 @ slot 3 (0x8118), POS, INS.
+    prog = compile_source(
+        "MARK 0\nGOTO 5\nPOS 1 . 99\nMARK 5\nPOS 2 . 123\nINS .",
+        raise_on_error=True,
+    )
+    from tbps_compiler.simload import load_program, set_program_pc, run_one_instruction
+    load_program(engine, prog)
+    assert prog.slots[1].opcode == 0x34          # GOTO unconditional
+    target = prog.pc_of_label(5)
+
+    # Start at the GOTO slot (preprocessor already built the label table via
+    # load_program) and run it; the program PC must become label 5's slot.
+    set_program_pc(engine, isa.SRAM_BODY_BASE + 1 * isa.SLOT_SIZE)
+    engine.command("set mem iram 0x28 0x0e")
+    engine.command("set mem iram 0x26 0x00")
+    run_one_instruction(engine)
+    lo = engine._dump_byte("iram", 0x66)
+    hi = engine._dump_byte("iram", 0x67)
+    assert (hi << 8 | lo) == target

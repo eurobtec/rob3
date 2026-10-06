@@ -44,6 +44,7 @@ from . import simload
 PROG_EXEC = 0x0941
 PC_ADVANCE_RET = 0x0A0B
 END_BRANCH = 0x0950        # anl 0x28,#0x03 (program end)
+PROG_GOTO_RET = 0x0A41     # prog_goto's RET (branch instructions exit here)
 
 
 @dataclass
@@ -111,14 +112,32 @@ class TbpsDebugger:
         opcode, operands = self._slot_at(pc_before)
         decoded = decode_slot(opcode, operands, pc_before)
 
+        # MARK is a label-definition consumed by the PREPROCESSOR, not executed
+        # by prog_exec (running 0x1F through the executor corrupts state). Model
+        # the real flow: skip the MARK slot (advance PC by one slot) without
+        # entering prog_exec.
+        if opcode == isa.OP_MARK:
+            pc_after = pc_before + isa.SLOT_SIZE
+            simload.set_program_pc(self.eng, pc_after)
+            self._i += 1
+            return StepFrame(
+                index=self._i, pc_before=pc_before, pc_after=pc_after,
+                text=decoded.text, opcode=opcode, ended=False,
+                targets=[self._byte("iram", 0x40 + k) for k in range(6)],
+                positions=[self._byte("iram", 0x50 + k) for k in range(6)],
+                state28=self._byte("iram", 0x28), note="label def (preprocessor)",
+            )
+
         # Run the interpreter for one instruction: enter prog_exec, stop at
         # either the normal PC-advance RET or the program-end branch.
         self.eng.command("pc 0x%04x" % PROG_EXEC)
         self.eng.command("break 0x%04x" % PC_ADVANCE_RET)
         self.eng.command("break 0x%04x" % END_BRANCH)
+        self.eng.command("break 0x%04x" % PROG_GOTO_RET)
         out = self.eng.run(timeout=timeout)
         self.eng.command("clear 0x%04x" % PC_ADVANCE_RET)
         self.eng.command("clear 0x%04x" % END_BRANCH)
+        self.eng.command("clear 0x%04x" % PROG_GOTO_RET)
 
         ended = ("0x%06x" % END_BRANCH) in out.lower() or \
                 ("0x%04x" % END_BRANCH) in out.lower()

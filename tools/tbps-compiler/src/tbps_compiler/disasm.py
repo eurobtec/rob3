@@ -77,21 +77,21 @@ def decode_slot(opcode: int, operands: bytes, addr: int) -> DecodedInstr:
         sign = "+" if operands[0] == 0x00 else "-"
         return DecodedInstr(addr, opcode, f"OUT {port} {sign}")
 
-    # GOTO: 0x30 (bit5+bit4).  [INFER operand layout]
-    if opcode == (isa.OP_GOTO | isa.BIT4):
-        label, count = operands[0], operands[1]
-        if count:
-            return DecodedInstr(addr, opcode, f"GOTO {label} . {count}", "[INFER operands]")
-        return DecodedInstr(addr, opcode, f"GOTO {label}", "[INFER operands]")
+    # GOTO unconditional (0x34): operand[0] = label.  [SIM]
+    if opcode == isa.OP_GOTO:
+        return DecodedInstr(addr, opcode, f"GOTO {operands[0]}")
 
-    # IF: 0x20 (bit5).  [INFER operand layout]
+    # GOTO counted (0x36): operand[0]=label, operand[1]=count.  [SIM]
+    if opcode == isa.OP_GOTO_COUNTED:
+        return DecodedInstr(addr, opcode, f"GOTO {operands[0]} . {operands[1]}")
+
+    # IF (0x32): operand[0]=label, operand[1]=input mask; jump when input low. [BYTE]
     if opcode == isa.OP_IF:
-        mask, label = operands[0], operands[1]
-        # recover input pin from the one-hot mask
-        pin = (mask.bit_length()) if mask else 0
+        label, mask = operands[0], operands[1]
+        pin = mask.bit_length() if mask else 0          # one-hot mask -> pin
         if label:
-            return DecodedInstr(addr, opcode, f"IF {pin} . {label}", "[INFER operands]")
-        return DecodedInstr(addr, opcode, f"IF {pin}", "[INFER operands]")
+            return DecodedInstr(addr, opcode, f"IF {pin} . {label}")
+        return DecodedInstr(addr, opcode, f"IF {pin}")
 
     return DecodedInstr(addr, opcode, f"??? (0x{opcode:02X})", "unknown opcode")
 

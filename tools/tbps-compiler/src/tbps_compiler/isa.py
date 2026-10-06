@@ -86,8 +86,18 @@ OP_POS_MOVE = 0x60       # POS a . n  "move axis a to position n": writes
 OP_POS_SPEED = 0x70      # move + speed (target+speed)      -> 0x70+axis, 0x7F=all
 OP_OUT = 0x10            # OUT: bit4 set, bit3 clear
 OP_TIM = 0x18            # TIM: bit4 set, bit3 set
-OP_GOTO = 0x20           # GOTO/IF class: bit5 set (bit6=0)
-OP_IF = 0x20             # same class as GOTO; discriminated by operands [INFER]
+# GOTO/IF branch class (prog_exec 0x09F1 -> L_0A0C): the handler is only reached
+# for opcodes >= 0x32 with bit5=1, bit4=1, bit3=0 (`add A,#0xCE ; jc`). operand[0]
+# is ALWAYS the label (resolved by prog_goto 0x0A33: rl A x2 -> page-0x80 table).
+#   [SIM] verified: GOTO 0 -> PC 0x8100, GOTO 2 -> 0x8120.
+OP_GOTO = 0x34           # GOTO m (unconditional). operand[0]=label.  [SIM]
+                         #   0x36/0x37 are the counted variants (write a counter
+                         #   byte back into the slot; 0x36 also = OP_INSTR3).
+OP_GOTO_COUNTED = 0x36   # GOTO m . n (counted).  [SIM] (counter side-effect)
+OP_IF = 0x32             # IF i [. m] (bit2 clear -> input test). operand[0]=label,
+                         #   operand[1]=input mask; jump when (mask & P1)==0, i.e.
+                         #   the masked input bit(s) are LOW (prog_exec L_0A12:
+                         #   anl A,P1 ; jnz no-jump).  [BYTE] from the decode.
 OP_MARK = 0x1F           # MARK -- preprocessor opcode (label definition) [BYTE][SIM]
 OP_END = 0x80            # program end / INS. -> any bit7-set byte [BYTE]
 OP_HALT_3BYTE = 0x36     # DEL. -- the special 3-byte instruction [BYTE][INFER meaning]
