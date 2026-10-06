@@ -85,19 +85,24 @@ Traced across `rs232.md`, `../board/MM74C04N.md`, `../board/M34004.md`,
 | 2 | MM74C04N #1 IN6 (10k) → P3.0/RXD | yes (serial path) |
 | 3 | M34004 OUT1 ← robot TXD | it's a driver OUTPUT |
 | 4 | MM74C04N #1 IN4 (10k) → P3.4/T0 poll gate | **yes — the gate of interest** |
-| 5 | GND | yes (ground reference) |
-| 6 | (no documented connection) | unknown — probe it |
-| 7 | (no documented connection) | unknown — probe it |
-| 8 | (no documented connection) | unknown — probe it |
+| 5 | Signal GND (≈0 V, buffered by M34004 OUT4) | yes (ground reference) |
+| 6 | **not connected** (confirmed) | no — dead |
+| 7 | **not connected** (confirmed) | no — dead |
+| 8 | **not connected** (confirmed) | no — dead |
 | 9 | M34004 ref (pins 3/12) via 22k — **PHYSICALLY CUT** on this board | **no — dead** |
 
-**Two hard conclusions from the trace:**
+**Hard conclusions from the trace:**
 
-- **No DB9 pin carries +5V** in any board doc. Therefore a passive plug cannot
-  strap DB9 pin 4 to +5V — there is no +5V source pin on this connector. Any
-  "short pin 4 to VCC" idea is dead unless a bench probe finds +5V on pin
-  1/6/7/8 (undocumented).
-- **DB9 pin 9 is cut** — cannot be used as a strap node.
+- **Pins 6, 7, 8 are not connected** (confirmed) and **pin 9 is cut**. So the
+  only live pins on this DB9 are **1 (unknown), 2, 3, 4, 5**.
+- **No DB9 pin carries +5V** in any board doc, and pins 6/7/8 are now ruled out
+  as a hidden +5V source. The only remaining unknown that could carry +5V is
+  **pin 1** — probe it. Absent that, there is **no +5V on this connector**, so a
+  passive plug **cannot** strap pin 4 to +5V; the only defined level available
+  to a plug is **pin 5 (Signal GND ≈0 V)**.
+- Therefore any shorting plug can only connect among **pins 1/2/4/5** (pin 3 is
+  a driver output, don't short it). With pin 1 unknown, the only
+  documented-safe strap targets are **pins 2, 4 → pin 5 (GND)**.
 
 ## Bench evidence so far  [HW-bench]
 
@@ -185,6 +190,54 @@ did not unblock the Teachbox.
 `jb P3_T0`), and the "2↔3 doesn't work" result are **[BYTE]/[HW-doc]/[HW-bench]**;
 the resulting strap (pins 4,2 ↔ 5/GND) is **[INFER]** until the measurement
 above.
+
+## What the plug looks like — build summary  [INFER, pending bench confirm]
+
+With the connector now fully inventoried — **pins 6/7/8 not connected, pin 9
+connected-but-cut on the PCB, pin 5 = Signal GND (≈0 V), pin 3 = a driver
+output (never short), pin 1 = still unknown** — the only pins a passive plug
+can legitimately bridge are **2, 4, and 5**. That yields a simple solder-bridge
+plug inside a DB9 shell, no components:
+
+```text
+   ROB3 RS-232 shorting connector (DB9), candidate wiring
+   ------------------------------------------------------
+         pin 2 (→ P3.0/RXD gate) ──┐
+                                    ├── pin 5  (Signal GND, ≈0 V)
+         pin 4 (→ P3.4/T0  gate) ──┘
+
+   pin 1  : unknown — PROBE before trusting (could be a 2nd GND or +5V)
+   pin 3  : robot TXD driver OUTPUT — DO NOT short
+   pin 6  : n/c
+   pin 7  : n/c
+   pin 8  : n/c
+   pin 9  : connected to M34004 ref via 22k but CUT on the PCB — dead node
+```
+
+**Rationale:** pins 2 and 4 are CMOS inverter inputs (MM74C04N #1 IN6/IN4). If
+the real board leaves them floating/indeterminate when the port is open, the
+plug ties them to the only defined level present on the connector — **pin 5,
+Signal Ground** — forcing each inverter input LOW → P3.0 and P3.4 both HIGH →
+auto-baud path selected **and** teach-poll gate open. This needs **no +5 V
+source** (there is none on this DB9) and uses only confirmed pins.
+
+**It is NOT a TX↔RX (2↔3) data loopback.** That commercial plug was
+bench-tested and **failed** — it never grounds pins 2/4, which is exactly why it
+did not unblock the Teachbox.
+
+**Still [INFER] because of one contradiction:** by the *documented* resistors
+(100 kΩ pulldowns on IN6/IN4), the gates are already HIGH with the port empty,
+so no plug should be needed — yet the manual requires one and the 2↔3 loopback
+failed. The 2-minute bench measurement in the next section resolves it:
+- If 8031 P3.0/P3.4 read **LOW** with the port open → the inputs are being held
+  high/float by an undocumented route → the **pins 2,4 → 5 (GND)** plug is
+  correct and necessary.
+- If they read **HIGH** already → the plug's role is only to define the idle
+  level (still **pins 2,4 → 5**, harmless and sufficient).
+- Also **probe pin 1** — if it is a second GND, add it to the pin-5 bridge; if
+  it is +5 V, the strap polarity may need rethinking.
+- Best of all: **buzz out the genuine ROB3 plug** pin-to-pin — that ends the
+  [INFER] immediately.
 
 ## How to verify on the bench
 
