@@ -174,6 +174,23 @@ the **actual plug wiring remains [INFER]** — only a wiring-accurate sim (drive
 DB9 2,4→GND through the inverter) or a bench buzz-out of the genuine plug would
 promote it to verified.
 
+> **Why a wiring-accurate "shorting_connector" module is deferred (not built).**
+> A faithful DB9-level module would drive pins 2/4 to GND through the MM74C04N
+> inversion. But (a) it **cannot replace `loopback`**: P3.2/emergency-off comes
+> from the **DB25 STOP line, not the DB9**, so a DB9-only model would leave P3.2
+> LOW and the ROM would still trap in the emergency-off spin — `loopback` is
+> still needed as the sim enabler. And (b) with the **documented pulldowns**,
+> DB9 pin 4 open already gives P3.4 HIGH, and grounding it keeps P3.4 HIGH — so
+> the module would merely re-confirm "the plug is a no-op," which is already
+> known analytically. It **cannot** reproduce the real-world symptom (bench
+> stayed blocked), because that symptom lives in the **physical board's
+> resistors**, not in the firmware or the documented wiring. The decisive next
+> step is therefore a **bench measurement**, not more simulation. A
+> wiring-accurate module becomes worthwhile only **after** the real-board
+> topology is measured — if it differs from the docs, a module built on the
+> *measured* resistors could then faithfully reproduce both "blocked without
+> plug" and "unblocked with pins 2,4→5". Until then: keep `loopback`.
+
 This is the real, now-sharpened contradiction: **the documented board does not
 need a shorting connector to run the Teachbox, yet the manual requires one and a
 bench loopback left it blocked.** Pin 2 additionally must stay **open** so it can
