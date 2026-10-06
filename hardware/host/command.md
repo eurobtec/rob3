@@ -275,10 +275,11 @@ the slot. Verified against the ROM in ucSim (`tools/tbps-compiler`):
 | `POS` (store all) | `0x07` | 6 bytes | all-axes set-position (`position[0x50..]`) | [INFER] |
 | `TIM t` | `0x18` | `t` lo, `t` hi | delay -> `0x1A/0x1B` | [SIM] |
 | `OUT k +/-` | `0x10 + (k-1)&3` | state (`+`=0x00 LOW, `-`=0x01 HIGH) | digital out via `portb_write` (0x07D3) | [SIM] |
-| `GOTO m [. n]` | `0x30` | `m`, `n` | jump / loop (resolves label via `prog_goto` 0x0A33) | [INFER] |
-| `IF i [. m]` | `0x20` | mask `1<<(i-1)`, `m` | input test / branch | [INFER] |
+| `GOTO m` | `0x34` | `m` | unconditional jump; operand[0]=label (resolves via `prog_goto` 0x0A33) | [SIM] |
+| `GOTO m . n` | `0x36` | `m`, `n` | counted loop to m, n times | [SIM] |
+| `IF i [. m]` | `0x32` | `m`, `1<<(i-1)` | input test/branch; op[0]=label, op[1]=mask; jump when `(mask & P1)==0` | [SIM]/[BYTE] |
 | `INS .` (END) | any bit7-set (`0x80`) | — | program end (`prog_exec` 0x094D) | [SIM] |
-| `DEL .` (HALT) | `0x36` | 3-byte special | halt / program separator | [INFER] |
+| `DEL .` (HALT) | `0x36` | 3-byte special | halt / program separator (opcode collides with counted GOTO) | [BYTE] |
 | `STOP 0`, `CLR` | — | — | header / mode-change: NO stored byte | [BYTE] |
 
 A ROM-faithful compiler for this encoding (lexer/parser/codegen + ucSim

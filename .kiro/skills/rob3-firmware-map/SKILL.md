@@ -190,7 +190,14 @@ ADC0808/0809**, EOC → INT1 — *not* a quadrature encoder. [HW]
    command bit fields as the RS232 dispatch, most instructions occupy an
    **8-byte slot**, PC in `0x66:0x67`), `prog_goto` **0x0A33** (label→PC:
    `rl A`×2 into the page-0x80 table). Opcode `0x1F`=MARK, `0x36`=3-byte instr,
-   bit7=END. SRAM layout: page **0x80** = label table (~128 labels) + header/
+   bit7=END. **TBPS opcode map [SIM]:** MARK=0x1F, POS-move=`0x60+axis`,
+   POS-store-all=0x07, TIM=0x18 (ops→0x1A/0x1B), OUT=`0x10+(k-1)&3`,
+   **GOTO=0x34** (operand[0]=label), **GOTO-counted=0x36**, **IF=0x32**
+   (op[0]=label, op[1]=input-mask; jump when `(mask & P1)==0`), move+speed=
+   `0x70+axis`/0x7F, END=bit7. The branch handler (0x09F1→L_0A0C) is reached
+   only for op≥0x32 with .5=1,.4=1,.3=0 — so the earlier guesses GOTO=0x30/
+   IF=0x20 were WRONG (they don't branch). Verified in `tools/tbps-compiler`.
+   SRAM layout: page **0x80** = label table (~128 labels) + header/
    end-marker at 0x80EE.., pages **0x81..0x9F** = program body (~7.9 KB of the
    8 KB HM6264, nonvolatile). Stored programs reuse the serial command encoding
    and are the SAME programs the Teachbox creates. Per-opcode operand layout is

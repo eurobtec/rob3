@@ -33,10 +33,11 @@ Full grammar, value ranges, SRAM layout, and corner-case semantics:
 | `POS` (store all) | `0x07` | 6 position bytes | [INFER] |
 | `TIM t` | `0x18` | `t` lo, `t` hi → `0x1A/0x1B` | [BYTE] reads |
 | `OUT k +/-` | `0x10 + (k-1)&3` | state (`+`=0x00 LOW, `-`=0x01 HIGH) | [BYTE] reads / [INFER] |
-| `GOTO m [. n]` | `0x30` | `m`, `n` (count; 0 = endless) | [INFER] |
-| `IF i [. m]` | `0x20` | input mask `1<<(i-1)`, `m` | [INFER] |
+| `GOTO m` | `0x34` | `m` (label; operand[0]) | [SIM] |
+| `GOTO m . n` | `0x36` | `m`, `n` (counted) | [SIM] |
+| `IF i [. m]` | `0x32` | `m` (label), `1<<(i-1)` (mask); jump when `(mask & P1)==0` | [SIM]/[BYTE] |
 | `INS .` (END) | `0x80` | — | [BYTE] |
-| `DEL .` (HALT) | `0x36` | 3-byte special | [BYTE] / [INFER] meaning |
+| `DEL .` (HALT) | `0x36` | 3-byte special (collides w/ counted GOTO) | [BYTE] |
 | `STOP 0`, `CLR` | — | header / mode-change: no stored byte | [BYTE] |
 
 Program store layout (external HM6264 SRAM, `xram` in ucSim):

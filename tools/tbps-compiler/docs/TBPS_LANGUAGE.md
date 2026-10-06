@@ -96,14 +96,20 @@ Programs are stored in external SRAM. Each instruction occupies a **fixed
 | `TIM t` | `0x18` | `t`&0xFF, `t`>>8 | delay → IRAM `0x1A/0x1B` | [SIM] |
 | `OUT k +` | `0x10 + (k−1)&3` | `0x00` | set output k LOW (active) | [SIM] |
 | `OUT k −` | `0x10 + (k−1)&3` | `0x01` | clear output k HIGH | [SIM] |
-| `GOTO m` | `0x30` | `m`, `0` | unconditional jump (endless) | [INFER] |
-| `GOTO m . n` | `0x30` | `m`, `n` | loop to m, n times | [INFER] |
-| `IF i` | `0x20` | `1<<(i−1)`, `0` | wait until input i low | [INFER] |
-| `IF i . m` | `0x20` | `1<<(i−1)`, `m` | branch to m if input i low | [INFER] |
+| `GOTO m` | `0x34` | `m` | unconditional jump (operand[0]=label) | [SIM] |
+| `GOTO m . n` | `0x36` | `m`, `n` | loop to m, n times (counted) | [SIM] |
+| `IF i` | `0x32` | `m`, `1<<(i−1)` | wait until input i low | [SIM]/[BYTE] |
+| `IF i . m` | `0x32` | `m`, `1<<(i−1)` | branch to m if input i low; op[0]=label, op[1]=mask; jump when `(mask & P1)==0` | [SIM]/[BYTE] |
 | `INS .` | `0x80` (any bit7 set) | — | program end | [SIM] |
-| `DEL .` | `0x36` | 3-byte special | HALT / program separator | [INFER] |
+| `DEL .` | `0x36` | 3-byte special | HALT / program separator (**opcode collides with counted GOTO 0x36**; disambiguated by context/operands) | [BYTE] |
 | `.` (NOP) | `0x40` | — | no-op | [BYTE] |
 | `STOP 0`, `CLR` | — | — | header / mode change: **no stored byte** | [BYTE] |
+
+> Branch opcodes verified [SIM]: the firmware branch handler (`prog_exec` 0x09F1
+> → `L_0A0C`) is only reached for opcodes **≥ 0x32** with bit5=1, bit4=1, bit3=0
+> (`add A,#0xCE ; jc`). `0x30`/`0x20` fall through and do **not** branch —
+> operand[0] is always the label (resolved by `prog_goto` 0x0A33, `rl A` ×2 into
+> the page-0x80 table). GOTO 0→0x8100, GOTO 2→0x8120, GOTO 5→0x8118 confirmed.
 
 Trailing bytes in a slot are zero-padded and ignored by the executor.
 

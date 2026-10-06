@@ -59,10 +59,15 @@
 ;   OUT k +/-     0x10|k      digital out via portb_write (0x07D3); operand =
 ;                             state (+ = 0x00 LOW, - = 0x01 HIGH). (prog_exec
 ;                             .4=1 .3=0, LCALL 0x07D3 at 0x09D9). [SIM]
-;   GOTO m [. n]  0x30        branch (bit5+bit4); operands m[,count].   [INFER]
-;   IF i [. m]    0x20        input test (bit5); operands mask,label.    [INFER]
+;   GOTO m        0x34        unconditional jump; operand[0]=label. [SIM]
+;                             (handler L_0A0C reached only for op>=0x32 with
+;                             .5=1 .4=1 .3=0 via add A,#0xCE/jc; 0x30/0x20 do
+;                             NOT branch). Verified GOTO 0->0x8100, 2->0x8120.
+;   GOTO m . n    0x36        counted loop; operands label,count. [SIM]
+;   IF i [. m]    0x32        input test; op[0]=label, op[1]=mask; jumps when
+;                             (mask & P1)==0 (L_0A12 anl A,P1 / jnz no-jump). [SIM]/[BYTE]
 ;   INS . (END)   bit7 set    program end (prog_exec .7=1 at 0x094D). [SIM]
-;   DEL . (HALT)  0x36        the 3-byte special opcode (preprocessor).  [INFER]
+;   DEL . (HALT)  0x36        the 3-byte special opcode (collides w/ counted GOTO). [BYTE]
 ;   STOP 0 / CLR  --          header / mode-change: emit NO stored byte.
 ;
 ; The teachbox editor and the serial 0x81 uploader write the SAME bytes into

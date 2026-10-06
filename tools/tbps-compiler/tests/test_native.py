@@ -17,9 +17,10 @@ from tbps_compiler.native import generate_asm
 def test_generate_asm_basic():
     asm = generate_asm("MARK 0\nPOS 1 . 128\nOUT 1 +\nINS .", org=0x2000)
     assert ".org 0x2000" in asm
-    assert "mov  0x40,#0x80" in asm        # POS 1 . 128 -> target[0] = 128
-    assert "Lmark_0:" in asm               # MARK label
-    assert "lcall 0x07d0" in asm           # OUT -> dout_write
+    assert '.include "tbps_isa.inc"' in asm  # symbolic equates header
+    assert "mov  TARGET_BASE+0,#0x80" in asm  # POS 1 . 128 -> target[0] = 128
+    assert "Lmark_0:" in asm                  # MARK label
+    assert "lcall DOUT_WRITE" in asm          # OUT -> dout_write (symbolic)
     assert asm.rstrip().endswith("ret")
 
 
@@ -47,7 +48,10 @@ def test_native_assembles():
     d = tempfile.mkdtemp()
     a = os.path.join(d, "p.asm")
     open(a, "w").write(asm)
-    r = subprocess.run(["sdas8051", "-l", "-o", a], cwd=d, capture_output=True, text=True)
+    from tbps_compiler.native import ISA_INC
+    incdir = os.path.dirname(ISA_INC)
+    r = subprocess.run(["sdas8051", "-I" + incdir, "-l", "-o", a],
+                       cwd=d, capture_output=True, text=True)
     assert r.returncode == 0, r.stdout + r.stderr
     assert os.path.exists(os.path.join(d, "p.rel"))
 
@@ -97,7 +101,9 @@ def test_native_equivalent_to_interpreter():
     asm = generate_asm(SRC, org=0x2000, name="prog")
     d = tempfile.mkdtemp()
     a = os.path.join(d, "p.asm"); open(a, "w").write(asm)
-    subprocess.run(["sdas8051", "-l", "-o", a], cwd=d, check=True, capture_output=True)
+    from tbps_compiler.native import ISA_INC
+    incdir = os.path.dirname(ISA_INC)
+    subprocess.run(["sdas8051", "-I" + incdir, "-l", "-o", a], cwd=d, check=True, capture_output=True)
     subprocess.run(["sdld", "-i", "-x", "-m", os.path.join(d, "p.ihx"),
                     os.path.join(d, "p.rel")], cwd=d, check=True, capture_output=True)
     writes = []
