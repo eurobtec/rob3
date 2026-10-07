@@ -77,7 +77,7 @@ make sim-adc UCSIM_51=~/github/danieldrotos/ucsim/src/sims/s51.src/ucsim_51
 or drive it directly:
 
 ```bash
-cp ../firmware/hex/M2764A@DIP28.HEX build/rob3.hex
+cp ../firmware/legacy/hex/M2764A@DIP28.HEX build/rob3.hex
 printf 'reset\nset mem sfr 0xb0 0x00\nbreak 0x074d\nrun 3000000\nquit\n' \
   | ucsim_51 -t 51 -X 11.0592M build/rob3.hex   # -> Stop at 0x00074d
 ```

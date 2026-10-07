@@ -20,7 +20,7 @@ tbpsc program.tbps --native       # emit native 8051 asm
 
 What stays in **this** (firmware) repo:
 
-- the authoritative TBPS/interpreter equates — `firmware/src/annotated/inc/program.inc`
+- the authoritative TBPS/interpreter equates — `firmware/src/inc/program.inc`
   (the compiler's `asm/tbps_isa.inc` mirrors it);
 - the keypad-typing behavioral test — `simulator/tests/test_teachbox_typing.py`;
 - the firmware annotations and the `rob3-firmware-map` skill that document the

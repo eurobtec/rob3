@@ -28,14 +28,14 @@ tested one.
 
 ### The `@` in `M2764A@DIP28.HEX` crashes ucSim
 ucSim (`s51` / `ucsim_51`) parses a file argument as `filename@memoryspace`. The
-ROM image `firmware/hex/M2764A@DIP28.HEX` is therefore read as file `M2764A`
+ROM image `firmware/legacy/hex/M2764A@DIP28.HEX` is therefore read as file `M2764A`
 into a memory space named `DIP28.HEX`, which does not exist. `cl_uc::read_file`
 (uc.cc) then calls `con->dd_printf(...)` on a **NULL** console (the input-file
 path passes `con=NULL` from `cl_app::read_input_files`), causing a **segfault**
 — symptom is "banner only, no command output" on a pipe and a core dump under a
 pty. This was initially and wrongly blamed on curses; curses is unrelated.
 - **Fix:** always run ucSim against an `@`-free copy, e.g.
-  `cp firmware/hex/M2764A@DIP28.HEX /tmp/rob3.hex` (the sim harness/tests already
+  `cp firmware/legacy/hex/M2764A@DIP28.HEX /tmp/rob3.hex` (the sim harness/tests already
   copy to `sim/build/rob3.hex` for this reason).
 - **Upstream:** filed as ucSim issue
   [#13](https://github.com/danieldrotos/ucsim/issues/13) (submitted + closed);
@@ -100,7 +100,7 @@ straight into 0x0003 → 0x0040 and loops in 0x0047..0x0054.
   P3 *latch*, not necessarily the input pin in this build — verify with a PC
   trace that execution actually leaves 0x0040 and reaches 0x07C4. The
   emergency-off handler is annotated at `emergency_off` (0x0040) in
-  `firmware/src/annotated/` (init.asm, main.asm).
+  `firmware/src/` (init.asm, main.asm).
 - **Root cause (HW):** P3.2 (and P3.4/poll-gate, P3.0/baud) are conditioned by
   **MM74C04N #1**; the board needs the **RS-232 shorting connector** installed
   for these to sit HIGH (hardware/teachbox/README.md, board/MM74C04N.md). The
@@ -163,12 +163,12 @@ entered at **0x0C00** (0x0BFF is padding); the key handler at **0x0C80**
 (0x0C7F is padding). Confirm entry addresses from the ROM bytes, not the labels.
 
 ### disasm51 dialect ≠ sdas8051 — convert before assembling the annotated source
-`firmware/src/main.asm` is [disasm51](https://github.com/OlekMazur/disasm51)
-output; the assembling 1:1 tree in `firmware/src/annotated/` uses **sdas8051**,
+`firmware/legacy/src/main.asm` is [disasm51](https://github.com/OlekMazur/disasm51)
+output; the assembling 1:1 tree in `firmware/src/` uses **sdas8051**,
 which does NOT accept disasm51 syntax: `NNh` hex → `0xNN`; bit dot-notation
 `28h.7`/`0x22.0` → the **numeric bit address** (e.g. `0x47`, `0x10`); bare `org`
 → `.org`; `$` self-ref → `.`; `jump_XXXX` labels → local labels or numeric.
-`firmware/src/annotated/d51_to_sdas.py` does this conversion using disasm51's own
+`firmware/src/d51_to_sdas.py` does this conversion using disasm51's own
 instruction decoder (`disasm51.instructions`), emitting per-instruction bytes so
 the output `cmp`s byte-exact. Install disasm51 in a venv (env is
 externally-managed): `python3 -m venv … && …/pip install disasm51`.

@@ -5,10 +5,10 @@
 #   ucsim_51   loader-enabled sim with the cl_hw modules (opt-in tests)
 #
 # The behavioral tests run the REAL ROM image in ucSim and assert runtime state
-# matches the annotated .asm files under ../firmware/src/annotated/.
+# matches the annotated .asm files under ../firmware/src/.
 #
 # The GOLDEN byte-match (assembled source == ROM) now lives with the annotated
-# source itself: ../firmware/src/annotated/ (make verify there builds the whole
+# source itself: ../firmware/src/ (make verify there builds the whole
 # 8 KB image and cmp's it against the ROM). This Makefile's `verify` target
 # delegates to it, so `make test` still covers golden + behavioral.
 #
@@ -18,11 +18,11 @@
 
 # ---- Layout ------------------------------------------------------------------
 FWDIR      := ../firmware
-BIN        := $(FWDIR)/bin/M2764A@DIP28.BIN
-HEX        := $(FWDIR)/hex/M2764A@DIP28.HEX
+BIN        := $(FWDIR)/legacy/bin/M2764A@DIP28.BIN
+HEX        := $(FWDIR)/legacy/hex/M2764A@DIP28.HEX
 SIMDIR     := .
 BUILD      := $(SIMDIR)/build
-ANNDIR     := $(FWDIR)/src/annotated
+ANNDIR     := $(FWDIR)/src
 
 # ---- Tools -------------------------------------------------------------------
 SIM        := s51
@@ -53,7 +53,7 @@ $(BUILD):
 	@mkdir -p $(BUILD)
 
 # ---- Golden byte-match (delegated to the annotated source tree) --------------
-verify: ## GOLDEN: assembled annotated source == ROM (runs make -C ../firmware/src/annotated verify)
+verify: ## GOLDEN: assembled annotated source == ROM (runs make -C ../firmware/src verify)
 	@$(MAKE) -C $(ANNDIR) verify
 $(SAFEHEX): $(HEX) | $(BUILD)
 	cp "$(HEX)" $(SAFEHEX)

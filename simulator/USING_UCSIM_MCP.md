@@ -60,7 +60,7 @@ import os
 from pyucsim import UCSimEngine
 
 BIN = os.environ["UCSIM_51"]        # custom build with the cl_hw modules
-ROM = ".../firmware/hex/M2764A@DIP28.HEX"   # @ handled automatically
+ROM = ".../firmware/legacy/hex/M2764A@DIP28.HEX"   # @ handled automatically
 MODS = ".../simulator/ucsim-modules"
 
 with UCSimEngine(BIN, cpu="51", xtal="11.0592M", image=ROM,

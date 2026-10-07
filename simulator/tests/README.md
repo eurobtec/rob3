@@ -1,10 +1,10 @@
 # simulator/tests
 
 Behavioral tests for the annotated ROB3 firmware regions. Each script runs the
-**real ROM** (`../../firmware/hex/M2764A@DIP28.HEX`) in the ucSim `s51`
+**real ROM** (`../../firmware/legacy/hex/M2764A@DIP28.HEX`) in the ucSim `s51`
 simulator and asserts that runtime behavior matches the annotated listings
-(`../../firmware/src/annotated/` (init.asm, main.asm),
-`../../firmware/src/annotated/teachbox.asm`).
+(`../../firmware/src/` (init.asm, main.asm),
+`../../firmware/src/teachbox.asm`).
 
 These complement the *golden byte-match* tests (`make verify`), which prove the
 transcriptions equal the ROM. These prove the ROM *behaves* as annotated.
@@ -39,7 +39,7 @@ Standalone (must provide the env vars the scripts expect):
 
 ```bash
 cd simulator
-cp ../firmware/hex/M2764A@DIP28.HEX build/rob3.hex
+cp ../firmware/legacy/hex/M2764A@DIP28.HEX build/rob3.hex
 SAFEHEX=build/rob3.hex SIM=s51 SIMFLAGS="-t 51 -X 11.0592M" \
   tests/sim_init.sh
 ```
@@ -135,7 +135,7 @@ dump iram 0x48 0x55 ; dump sfr 0xa8 0xa8
 ## `sim_serial.sh` — RS-232 command protocol semantics
 
 **Premise.** Prove the RS-232 UART command dispatch and response framing
-annotated in `../firmware/src/annotated/rs232.asm`, by running
+annotated in `../firmware/src/rs232.asm`, by running
 the real ROM and observing IRAM/registers.
 
 **ucSim serial quirk (why we don't inject via SBUF).** In this build's serial
@@ -203,7 +203,7 @@ this test uses the genuine UART path).
 ## `sim_teachbox.sh` — keypad scanner decode
 
 **Premise.** Run the Teachbox keypad scanner `kbd_scan` (entry `0x0C00`, see
-`../../firmware/src/annotated/teachbox.asm`) and prove it decodes the column-group bits
+`../../firmware/src/teachbox.asm`) and prove it decodes the column-group bits
 into the documented key-index bases. The scanner strobes matrix rows via the
 8255 (unmodeled here) and reads the three column groups from **P1 (SFR 0x90)**,
 top 3 bits.

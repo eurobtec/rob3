@@ -6,7 +6,7 @@
 # tables) in address order. The goal is a build whose 8 KB output is
 # BYTE-IDENTICAL to the original EPROM image:
 #
-#     firmware/bin/M2764A@DIP28.BIN
+#     firmware/legacy/bin/M2764A@DIP28.BIN
 #
 # Toolchain (SDCC suite + binutils):
 #     sdas8051   assembler  (.asm -> .rel)
@@ -27,8 +27,8 @@
 #==============================================================================
 
 # ---- Layout ------------------------------------------------------------------
-FWDIR      := ../../..
-ROM        := $(FWDIR)/firmware/bin/M2764A@DIP28.BIN
+FWDIR      := ../..
+ROM        := $(FWDIR)/firmware/legacy/bin/M2764A@DIP28.BIN
 BUILD      := _build
 ROMSIZE    := 8192
 

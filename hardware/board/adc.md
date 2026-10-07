@@ -73,7 +73,7 @@ The functional labels below are derived from the ringed-out net list, not from c
 ## Firmware confirmation (ADC0808/0809)
 
 The ADC0808/0809 identification is confirmed by the firmware in
-`firmware/src/main.asm`. Every control line ringed out on the board has a
+`firmware/legacy/src/main.asm`. Every control line ringed out on the board has a
 matching software behaviour:
 
 - **EOC → /INT1 (pin 16 → 8031 pin 13).** The 8031 interrupt vector at `0013h`

@@ -55,7 +55,7 @@ What exists in this repository today:
   RS-232 `0x81` upload-and-run, `0x80` readback, and native==interpreter
   equivalence). **Its own repository:**
   [eurobtec/tbps_compiler](https://github.com/eurobtec/tbps_compiler) (the
-  interpreter equates `firmware/src/annotated/inc/program.inc` and the
+  interpreter equates `firmware/src/inc/program.inc` and the
   keypad-typing test `simulator/tests/test_teachbox_typing.py` stay here).
 - **Arduino bench bring-up rigs** that recreate the teachbox and a single robot
   axis to confirm hardware claims independently of the 8031.
@@ -81,11 +81,11 @@ rob3/
 ├── ROB3_FIRMWARE_REENGINEERING.md    # project charter: goals, scope, success criteria
 ├── LICENSE
 ├── firmware/                         # the firmware itself (ROM + disassembly + annotations)
-│   ├── bin/ hex/                      #   ROM image (binary + Intel HEX)
-│   ├── src/                           #   raw disasm (main.asm) + annotated/ (assembling 1:1: rob3.asm + *.asm + inc/*.inc + Makefile)
+│   ├── src/                           #   assembling 1:1 annotated source (rob3.asm + *.asm + inc/*.inc + Makefile)
+│   ├── legacy/                        #   originals: bin/ hex/ (ROM image) + src/main.asm (raw disasm)
 │   ├── INSTALL.md                     #   toolchain prerequisites
 ├── simulator/                        # behavioral-test rig (drives ../firmware)
-│   ├── Makefile                       #   sim-* targets; verify delegates to firmware/src/annotated
+│   ├── Makefile                       #   sim-* targets; verify delegates to firmware/src
 │   ├── BUILD.md                       #   build/test guide
 │   ├── tests/                          #   ucSim behavioral tests
 │   ├── harness/                        #   Teachbox GUI/CLI (use the external rob3_ucsim pkg)
@@ -114,7 +114,7 @@ make test     # golden byte-match + ucSim behavioral tests
 make help     # list all targets (verify / sim-init / sim-run / sim-teachbox / gen)
 ```
 
-> **ucSim `@`-filename gotcha:** the shipped ROM is `hex/M2764A@DIP28.HEX`, and
+> **ucSim `@`-filename gotcha:** the shipped ROM is `legacy/hex/M2764A@DIP28.HEX`, and
 > the `@` crashes `s51` (it parses `file@memoryspace`). The Makefile copies the
 > image to a shell-safe `simulator/build/rob3.hex` automatically — you never
 > need to rename anything by hand.

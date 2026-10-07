@@ -3,7 +3,7 @@
 This directory holds the **annotated disassembly** of the ROB3 8031 firmware,
 organized as an assembling source tree. The goal is a build whose 8 KB output
 is **byte-identical** to the original EPROM image
-(`firmware/bin/M2764A@DIP28.BIN`), while every instruction carries a
+(`firmware/legacy/bin/M2764A@DIP28.BIN`), while every instruction carries a
 human-readable annotation and a provenance tag.
 
 ## Build
@@ -72,7 +72,7 @@ Unmarked instruction lines default to **[BYTE]**.
 The whole tree assembles to a **byte-identical 8 KB image** (`make verify` is
 green; all 10 regions pass `make status`). The assembling bodies were produced
 from the ROM with [disasm51](https://github.com/OlekMazur/disasm51) (the same
-decoder that made `firmware/src/main.asm`) via `d51_to_sdas.py`, which renders
+decoder that made `firmware/legacy/src/main.asm`) via `d51_to_sdas.py`, which renders
 sdas8051-native syntax (0x.. hex, numeric bit addresses, in-region branch
 targets as local labels, out-of-region/absolute targets as numbers). The
 per-region annotation headers document each block; the assembling body follows.

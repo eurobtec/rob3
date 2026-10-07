@@ -29,7 +29,7 @@ metadata:
 
 An **Intel 8031** boots an external **M2764A 8 KB EPROM** (`firmware/hex`,
 `firmware/bin`); reset is `LJMP 0x0600`. The in-tree firmware is assembly; the
-annotated listings live in `firmware/src/annotated/*.annotated.asm`. See `rob3-hardware`.
+annotated listings live in `firmware/src/*.annotated.asm`. See `rob3-hardware`.
 
 ## Two-layer verification model (how this project proves firmware)
 
@@ -48,8 +48,8 @@ the generated `.a51`**; edit the annotated `.asm` and regenerate.
 
 | Region   | Addresses         | Source                              |
 | :------- | :---------------- | :---------------------------------- |
-| init     | `0x0600..0x074C`  | `firmware/src/annotated/main.annotated.asm`   |
-| teachbox | `0x0C00..0x0C6B`  | `firmware/src/annotated/teachbox.annotated.asm` (keypad scanner) |
+| init     | `0x0600..0x074C`  | `firmware/src/main.annotated.asm`   |
+| teachbox | `0x0C00..0x0C6B`  | `firmware/src/teachbox.annotated.asm` (keypad scanner) |
 
 The main loop, ISRs, serial protocol, and motion interpreter are **not yet
 transcribed**.
@@ -77,13 +77,13 @@ Overridable vars (e.g. macOS): `make OBJCOPY=gobjcopy verify`,
 ## CRITICAL gotcha — the `@` in the ROM filename crashes s51
 
 ucSim parses a file argument as `filename@memoryspace`. The shipped image
-`firmware/hex/M2764A@DIP28.HEX` is read as file `M2764A` into a memory space
+`firmware/legacy/hex/M2764A@DIP28.HEX` is read as file `M2764A` into a memory space
 `DIP28.HEX` that doesn't exist; `cl_uc::read_file` then dereferences a **NULL**
 console and **segfaults** (symptom: "banner only, no output", core dump under a
 pty). This is *not* a curses problem. **Always run against an `@`-free copy:**
 
 ```bash
-cp firmware/hex/M2764A@DIP28.HEX simulator/build/rob3.hex
+cp firmware/legacy/hex/M2764A@DIP28.HEX simulator/build/rob3.hex
 s51 -t 51 -X 11.0592M simulator/build/rob3.hex
 ```
 
@@ -236,7 +236,7 @@ UCSIM=~/github/danieldrotos/ucsim
 4. `cd "$UCSIM" && ./configure && make -C src/sims/s51.src`  → `ucsim_51`.
 
 ```bash
-cp firmware/hex/M2764A@DIP28.HEX /tmp/rob3.hex
+cp firmware/legacy/hex/M2764A@DIP28.HEX /tmp/rob3.hex
 printf 'set hardware teachbox 0 1\nreset\npc 0x0c00\n...\nquit\n' \
   | ucsim_51 -t 51 -X 11.0592M /tmp/rob3.hex
 ```

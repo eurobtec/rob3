@@ -28,7 +28,7 @@ import time
 UCSIM = os.environ.get("UCSIM_51") or os.path.expanduser(
     "~/github/razr/ucsim/src/sims/s51.src/ucsim_51")
 ROM_SRC = os.environ.get("ROB3_ROM") or os.path.expanduser(
-    "~/github/razr/rob3/firmware/hex/M2764A@DIP28.HEX")
+    "~/github/razr/rob3/firmware/legacy/hex/M2764A@DIP28.HEX")
 MODS = os.environ.get("ROB3_MODS") or os.path.expanduser(
     "~/github/razr/rob3/simulator/ucsim-modules")
 DRIVER = os.environ.get("DRIVER") or os.path.expanduser(

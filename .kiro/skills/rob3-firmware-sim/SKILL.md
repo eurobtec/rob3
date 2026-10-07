@@ -31,7 +31,7 @@ metadata:
 
 An **Intel 8031** boots an external **M2764A 8 KB EPROM** (`firmware/hex`,
 `firmware/bin`); reset is `LJMP 0x0600`. The in-tree firmware is assembly; the
-annotated, *assembling* 1:1 source lives in `firmware/src/annotated/` (one file
+annotated, *assembling* 1:1 source lives in `firmware/src/` (one file
 per functional region + `inc/*.inc` equates, assembled by `rob3.asm`). See
 `rob3-hardware`.
 
@@ -40,7 +40,7 @@ per functional region + `inc/*.inc` equates, assembled by `rob3.asm`). See
 1. **Golden byte-match** (`make verify`): assemble the annotated source and
    `cmp` the whole 8 KB image against the ROM. Proves *the listing matches the
    image*. Matching SHA-256 hashes are printed. This build lives in
-   `firmware/src/annotated/` (its own Makefile: `verify` / `regions` / `status`);
+   `firmware/src/` (its own Makefile: `verify` / `regions` / `status`);
    `simulator/make verify` **delegates** to it.
 2. **Behavioral simulation** (`make sim-*`): run the **real ROM** in ucSim
    (`s51`) and assert runtime state (SFRs, IRAM) against the annotation. Proves
@@ -49,7 +49,7 @@ per functional region + `inc/*.inc` equates, assembled by `rob3.asm`). See
 Always keep both green. The annotated `.asm` regions ARE the assembling source
 (a per-region annotation header + a byte-exact instruction body). The bodies
 were produced from the ROM with **disasm51** (the decoder that made
-`firmware/src/main.asm`) via `firmware/src/annotated/d51_to_sdas.py`, which emits
+`firmware/legacy/src/main.asm`) via `firmware/src/d51_to_sdas.py`, which emits
 sdas8051-native syntax (0x.. hex, numeric bit addresses, in-region branch
 targets as local labels, out-of-region/absolute targets as numbers). Use
 `make regions` to dump a region's exact ROM slice, `make verify-region
@@ -67,7 +67,7 @@ individually.
 
 ## Annotated source regions (assembled into the 1:1 image)
 
-| Region   | Entry    | File (`firmware/src/annotated/`)   |
+| Region   | Entry    | File (`firmware/src/`)   |
 | :------- | :------- | :--------------------------------- |
 | vectors  | `0x0000` | `vectors.asm`      |
 | ext0     | `0x0040` | `ext0_estop.asm`   |
@@ -90,7 +90,7 @@ definitions. Some region bodies are annotated but not yet byte-complete (see
 | Target | Description |
 | :----- | :---------- |
 | `make` / `make all` | Run `test` (golden + behavioral). |
-| `make verify` | **Golden test** (delegates to `firmware/src/annotated`): assembled source == ROM. |
+| `make verify` | **Golden test** (delegates to `firmware/src`): assembled source == ROM. |
 | `make sim-init` | Behavioral: from reset, init **blocks at `0x0680`** (ADC EOC/INT1 wait) — correct with no ADC model. |
 | `make sim-run` | Behavioral: inject the gates, run to end of init `0x074B` into the main loop. |
 | `make sim-teachbox` | Behavioral: run the keypad scanner, assert key decode. |
@@ -106,21 +106,21 @@ definitions. Some region bodies are annotated but not yet byte-complete (see
 | `make clean` | Remove `build/`. |
 | `make help` | List targets. |
 
-The golden build in `firmware/src/annotated/` adds: `make regions` (dump each
+The golden build in `firmware/src/` adds: `make regions` (dump each
 region's ROM slice) and `make status` (report regions not yet byte-complete).
-Overridable vars (e.g. macOS): `make -C ../firmware/src/annotated OBJCOPY=gobjcopy verify`,
+Overridable vars (e.g. macOS): `make -C ../firmware/src OBJCOPY=gobjcopy verify`,
 `make SIM="$(command -v s51)" test`. Toolchain/versions: `firmware/INSTALL.md`.
 
 ## CRITICAL gotcha — the `@` in the ROM filename crashes s51
 
 ucSim parses a file argument as `filename@memoryspace`. The shipped image
-`firmware/hex/M2764A@DIP28.HEX` is read as file `M2764A` into a memory space
+`firmware/legacy/hex/M2764A@DIP28.HEX` is read as file `M2764A` into a memory space
 `DIP28.HEX` that doesn't exist; `cl_uc::read_file` then dereferences a **NULL**
 console and **segfaults** (symptom: "banner only, no output", core dump under a
 pty). This is *not* a curses problem. **Always run against an `@`-free copy:**
 
 ```bash
-cp firmware/hex/M2764A@DIP28.HEX simulator/build/rob3.hex
+cp firmware/legacy/hex/M2764A@DIP28.HEX simulator/build/rob3.hex
 s51 -t 51 -X 11.0592M simulator/build/rob3.hex
 ```
 
@@ -273,7 +273,7 @@ UCSIM=~/github/danieldrotos/ucsim
 4. `cd "$UCSIM" && ./configure && make -C src/sims/s51.src`  → `ucsim_51`.
 
 ```bash
-cp firmware/hex/M2764A@DIP28.HEX /tmp/rob3.hex
+cp firmware/legacy/hex/M2764A@DIP28.HEX /tmp/rob3.hex
 printf 'set hardware teachbox 0 1\nreset\npc 0x0c00\n...\nquit\n' \
   | ucsim_51 -t 51 -X 11.0592M /tmp/rob3.hex
 ```

@@ -1,10 +1,18 @@
 # ROB3 Onboard Firmware (8031 Controller)
 
-This directory contains the original binary image extracted from the ROB3’s local controller board, alongside the workspaces required to reverse-engineer and reconstruct its assembly source code.
+This directory contains the reverse-engineering workspace for the ROB3's local
+controller board firmware. Layout:
+
+- **`src/`** — the **assembling, annotated source** (1:1 with the ROM): the
+  build here produces a byte-identical 8 KB image. This is the main source.
+- **`legacy/`** — the original artifacts the work started from:
+  - `legacy/bin/M2764A@DIP28.BIN` — the original EPROM binary image
+  - `legacy/hex/M2764A@DIP28.HEX` — the same image in Intel HEX
+  - `legacy/src/main.asm` — the raw `disasm51` output (unannotated)
 
 ## Binary Specifications
 
-*   **Source File:** [`M2764A@DIP28.BIN`](M2764A@DIP28.BIN)
+*   **Source File:** [`legacy/bin/M2764A@DIP28.BIN`](legacy/bin/M2764A@DIP28.BIN)
 *   **Target Memory Chip:** STMicroelectronics / Intel `M2764A`
 *   **Package Layout:** Dual-in-Line 28-Pin (DIP28) Ceramic Window Package
 *   **Memory Type:** Non-Volatile UV-Erasable EPROM
@@ -25,10 +33,10 @@ To regenerate code blocks from the raw byte segments, process the binary through
 
 ### Option A: Command Line Disassembly (d51)
 ```bash
-d51 -o src/main.asm M2764A@DIP28.BIN
+d51 -o legacy/src/main.asm legacy/bin/M2764A@DIP28.BIN
 ```
 
 ### Option B: Interactive Static Analysis (Ghidra)
-1. Import `M2764A@DIP28.BIN` as a **Raw Binary**.
+1. Import `legacy/bin/M2764A@DIP28.BIN` as a **Raw Binary**.
 2. Select Language Processor: **8051 / MCS-51 (8-bit)**.
 3. Configure the block to initialize memory boundaries mapping natively from address `0x0000`.

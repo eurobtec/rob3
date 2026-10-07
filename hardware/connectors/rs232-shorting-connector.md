@@ -59,7 +59,7 @@ corresponding P3 gate LOW.
 ## The two firmware gates  [SIM][BYTE]
 
 The firmware only reaches the Teachbox poll (`tb_poll`, 0x07C4) when two Port-3
-inputs are the right level (see `../../firmware/src/annotated/main.asm`
+inputs are the right level (see `../../firmware/legacy/src/main.asm`
 and `../../simulator/ucsim-modules/loopback/README.md`):
 
 1. **P3.2 / INT0 = EMERGENCY-OFF**, active LOW → must be **HIGH** to run.
@@ -67,7 +67,7 @@ and `../../simulator/ucsim-modules/loopback/README.md`):
    +5V pullup), **not** from the DB9. It idles HIGH when STOP is not pressed.
    The RS-232 connector does **not** set this. [HW]
 2. **P3.4 / T0 = poll enable**, must be **HIGH** to pass the gate.
-   The exact instruction is at 0x07AB in `../../firmware/src/main.asm`:
+   The exact instruction is at 0x07AB in `../../firmware/legacy/src/main.asm`:
    `jb 0B0h.4, jump_07C4` — **JB P3.4, tb_poll**. The scanner
    (`LCALL 0x0BFF` = kbd_scan) is called **only when P3.4 = HIGH**; if P3.4 is
    LOW the ROM skips the poll. So **P3.4 must be HIGH**. [BYTE]
@@ -131,7 +131,7 @@ therefore **closed**: the pulldown is now drawn explicitly on both pins in
 
 ## Firmware init branches on these pins  [BYTE][SIM]
 
-Verified against the ROM (`../../firmware/src/annotated/init.asm`,
+Verified against the ROM (`../../firmware/src/init.asm`,
 `main.asm`):
 
 | 8031 pin | DB9 pin OPEN → level | firmware consequence |

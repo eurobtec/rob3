@@ -8,7 +8,7 @@ and test).
 
 | Tool | Provides | Used for |
 | :--- | :------- | :------- |
-| `sdas8051` | SDCC 8051 assembler | assemble the annotated source (`firmware/src/annotated/`) |
+| `sdas8051` | SDCC 8051 assembler | assemble the annotated source (`firmware/src/`) |
 | `sdld` | SDCC linker (ASlink) | link `.rel` → Intel HEX |
 | `objcopy` | GNU binutils | Intel HEX → raw binary |
 | `s51` | ucSim 8051 simulator | run the ROM, behavioral tests |

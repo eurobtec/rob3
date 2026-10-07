@@ -11,7 +11,7 @@
 set -u
 
 UC="${UCSIM_51:-$HOME/github/eurobtec/ucsim/src/sims/s51.src/ucsim_51}"
-HEX="${ROB3_HEX:-$HOME/github/eurobtec/rob3/firmware/hex/M2764A@DIP28.HEX}"
+HEX="${ROB3_HEX:-$HOME/github/eurobtec/rob3/firmware/legacy/hex/M2764A@DIP28.HEX}"
 
 if [ ! -x "$UC" ]; then echo "SKIP: ucsim_51 not found at $UC (set UCSIM_51)"; exit 0; fi
 # @-free copy (unrelated issue 002)

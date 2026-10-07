@@ -96,7 +96,7 @@ The motor works, the potentiometer can rotate from 0 to 1023. Set it back. Now i
 
 The ROB3 firmware commands and servos axes in **raw 8-bit ADC counts (0..255)**,
 not in degrees or mm (see
-`../../firmware/src/annotated/ext1_servo.asm`). The pots are
+`../../firmware/src/ext1_servo.asm`). The pots are
 **absolute** transducers, so there is no homing — a count *is* the position.
 Converting a physical angle/position to a `POS a . <count>` value (or a reading
 back to an angle) is a **per-axis linear interpolation** between two measured
@@ -150,7 +150,7 @@ stores in `AXIS_CAL[0..5]`.
 
 ## ⚠️ Safety: the firmware does NOT enforce per-axis travel limits
 
-Traced in `../../firmware/src/main.asm` (the `POS a . n ENT` value-entry path):
+Traced in `../../firmware/legacy/src/main.asm` (the `POS a . n ENT` value-entry path):
 the firmware validates only that **the value is 0..255** (the decimal
 accumulator at `jump_0D65`/`jump_0D78` does `*10 + digit` and jumps to the ERR
 handler `jump_0D23` on byte overflow) and that **the axis is 1..6**

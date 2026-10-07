@@ -28,7 +28,7 @@ metadata:
 > interface + keyboard node were added.
 >
 > Talks the ROB3 low-level protocol — reverse-engineered and [SIM]-verified in
-> this repo's `hardware/host/command.md` and `firmware/src/annotated/rs232.asm`
+> this repo's `hardware/host/command.md` and `firmware/src/rs232.asm`
 > — over RS-232 to the 8031. Modelled on the UR ROS 2 driver but in Python. For
 > the protocol itself see the `rob3-firmware-map` / `rob3-firmware-sim` skills.
 

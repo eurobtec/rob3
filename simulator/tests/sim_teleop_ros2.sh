@@ -41,7 +41,7 @@ exec timeout "$((TIMEOUT + 40))" docker run --rm \
     source /opt/ros/\$ROS_DISTRO/setup.bash
     source /opt/rob3_ws/install/setup.bash
     UCSIM_51=/host/ucsim/src/sims/s51.src/ucsim_51 \
-    ROB3_ROM='/host/rob3/firmware/hex/M2764A@DIP28.HEX' \
+    ROB3_ROM='/host/rob3/firmware/legacy/hex/M2764A@DIP28.HEX' \
     ROB3_MODS=/host/rob3/simulator/ucsim-modules \
     TELEOP_TIMEOUT=$TIMEOUT \
     python3 /host/drvtest/test_teleop_ucsim.py

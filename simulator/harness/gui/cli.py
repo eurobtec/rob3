@@ -40,7 +40,7 @@ Run:
     custom ucsim_51 (built with the cl_hw modules). Plain `python3 cli.py`
     (even with UCSIM_51 set) is plant-only — no ROM, no ucSim.
 
-    Bare --firmware loads the default ROM (firmware/hex/M2764A@DIP28.HEX, or
+    Bare --firmware loads the default ROM (firmware/legacy/hex/M2764A@DIP28.HEX, or
     the ROB3_HEX env var); --firmware <hexfile> loads that ROM instead.
 """
 from __future__ import annotations
@@ -333,7 +333,7 @@ def main():
                     help="drive the real ROM in ucSim (REQUIRED to run the 8031 "
                          "program; without it the CLI is plant-only). Bare "
                          "--firmware loads the default ROM "
-                         "(firmware/hex/M2764A@DIP28.HEX, or the ROB3_HEX env var); "
+                         "(firmware/legacy/hex/M2764A@DIP28.HEX, or the ROB3_HEX env var); "
                          "--firmware <hexfile> loads that ROM instead. Needs the "
                          "custom ucsim_51 (point at it with UCSIM_51=...); slower — "
                          "interactive ucSim over a pty")

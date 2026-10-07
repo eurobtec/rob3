@@ -16,19 +16,19 @@ make test       # golden byte-match + simulator behavioral tests
 
 ## What this build does
 
-The annotated disassembly under `../firmware/src/annotated/` documents the
+The annotated disassembly under `../firmware/src/` documents the
 firmware at the instruction level. To prove that documentation is faithful — and
 that the firmware actually behaves as annotated — verification has two
 independent halves:
 
 1. **Golden byte-match (A).** The annotated source is an *assembling* 1:1
-   transcription of the ROM: `../firmware/src/annotated/` builds the whole 8 KB
-   image and `cmp`s it against `../firmware/bin/M2764A@DIP28.BIN`. This proves
+   transcription of the ROM: `../firmware/src/` builds the whole 8 KB
+   image and `cmp`s it against `../firmware/legacy/bin/M2764A@DIP28.BIN`. This proves
    *the listing matches the firmware image*. This directory's `make verify`
-   **delegates** to that tree (`make -C ../firmware/src/annotated verify`).
+   **delegates** to that tree (`make -C ../firmware/src verify`).
 
 2. **Simulator behavioral tests (B).** The **real ROM**
-   (`../firmware/hex/M2764A@DIP28.HEX`) is run in ucSim (`s51`) and its runtime
+   (`../firmware/legacy/hex/M2764A@DIP28.HEX`) is run in ucSim (`s51`) and its runtime
    state is checked against the annotation's claims. This proves *the firmware
    behaves as documented*.
 
@@ -74,16 +74,16 @@ rob3/
 | `make clean` | Remove `build/`. |
 | `make help` | List targets. |
 
-The golden build itself (in `../firmware/src/annotated/`) has its own targets:
+The golden build itself (in `../firmware/src/`) has its own targets:
 `make verify`, `make regions` (dump each region's ROM slice), `make status`
 (report regions not yet byte-complete). See that directory's `README.md`.
 
 ## Toolchain pipeline (golden)
 
 ```
-firmware/src/annotated/rob3.asm --sdas8051--> rob3.rel --sdld--> rob3.ihx --objcopy--> rob3.bin (8 KB)
+firmware/src/rob3.asm --sdas8051--> rob3.rel --sdld--> rob3.ihx --objcopy--> rob3.bin (8 KB)
                                                                                           |
-                                                     cmp against firmware/bin/M2764A@DIP28.BIN
+                                                     cmp against firmware/legacy/bin/M2764A@DIP28.BIN
                                                                                           v
                                                                               GOLDEN PASS/FAIL
 ```
@@ -91,7 +91,7 @@ firmware/src/annotated/rob3.asm --sdas8051--> rob3.rel --sdld--> rob3.ihx --objc
 Overridable variables (e.g. macOS `gobjcopy`):
 
 ```bash
-make -C ../firmware/src/annotated OBJCOPY=gobjcopy verify
+make -C ../firmware/src OBJCOPY=gobjcopy verify
 make SIM="$(command -v s51)" test
 ```
 
@@ -99,7 +99,7 @@ make SIM="$(command -v s51)" test
 
 ### Golden (`verify`)
 The assembled annotated source must be **byte-identical** to
-`../firmware/bin/M2764A@DIP28.BIN` across the whole 8 KB image. Matching
+`../firmware/legacy/bin/M2764A@DIP28.BIN` across the whole 8 KB image. Matching
 SHA-256 hashes are printed as proof.
 
 ### Behavioral (`sim-init`, `sim-run`, ...)
@@ -133,7 +133,7 @@ Load the ROM and explore interactively:
 
 ```bash
 cd simulator
-cp ../firmware/hex/M2764A@DIP28.HEX build/rob3.hex
+cp ../firmware/legacy/hex/M2764A@DIP28.HEX build/rob3.hex
 s51 -t 51 -X 11.0592M build/rob3.hex
 # then, at the uCsim prompt:
 #   reset
