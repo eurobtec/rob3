@@ -1,5 +1,15 @@
 # TBPS Language Formal Description
 
+> Source-syntax reference for the TBPS teach-box language. For the **byte-level
+> program encoding** (opcodes, 8-byte slots, SRAM layout) verified against this
+> ROM, see the compiler's spec in
+> [eurobtec/tbps_compiler](https://github.com/eurobtec/tbps_compiler)
+> (`docs/TBPS_LANGUAGE.md`).
+>
+> **Model note:** this **ROB3** ROM uses **8-bit axis positions (`0..255`)**.
+> The ranges below marked `0..511` are the newer **ROB3i** 512-step model; on
+> this ROM, treat axis positions (axes 1–5) as `0..255`.
+
 ## 1. Lexical Tokens and Value Ranges
 *   **Keywords / Instructions:** `MARK`, `POS`, `TIM`, `GOTO`, `IF`, `OUT`, `STOP`, `INS`, `DEL`, `CLR`, `ENT`.
 *   **Separators:** 
@@ -9,7 +19,7 @@
 *   **Identifiers / Parameters:**
     *   `m` (Label address): Integer from `0` to `118`.
     *   `a` (Axis designator): Integer from `1` to `6`.
-    *   `n` (Axis position): Integer from `0` to `511` (Axes 1–5), `0` to `100` (Electric Gripper), or `0` to `1` (Pneumatic Gripper).
+    *   `n` (Axis position): Integer `0` to `255` on this ROB3 ROM (8-bit); `0` to `100` (Electric Gripper), `0` to `1` (Pneumatic Gripper). *(ROB3i model: `0..511` for axes 1–5.)*
     *   `t` (Time delay value): Integer from `0` to `65535` (Units of 100 ms).
     *   `i` (Digital input port): Integer from `1` to `8`.
     *   `k` (Digital output port): Integer from `1` to `8`.
@@ -29,7 +39,7 @@ Instruction     = MarkInst | PosInst | DirectPosInst | TimInst |
 
 MarkInst        = "MARK" , Label , "ENT" ;
 PosInst         = "POS" , "ENT" ;
-DirectPosInst   = "POS" , Axis , "." , Position , "ENT" ;
+DirectPosInst   = "POS" , Axis , "." , Position , [ [ "," ] Speed ] , "ENT" ;
 TimInst         = "TIM" , Delay , "ENT" ;
 GotoUncond      = "GOTO" , Label , "ENT" ;
 GotoCond        = "GOTO" , Label , "." , Counter , "ENT" ;
@@ -40,9 +50,10 @@ HaltInst        = "DEL" , "." , "ENT" ;
 
 Label           = integer_0_to_118 ;
 Axis            = "1" | "2" | "3" | "4" | "5" | "6" ;
-Position        = integer_0_to_511 ; (* Variant constraints apply based on Axis and Gripper *)
+Position        = integer_0_to_255 ; (* ROB3 ROM: 8-bit; gripper variants apply. ROB3i model: 0..511 *)
 Delay           = integer_0_to_65535 ;
 Counter         = integer_0_to_255 ;
+Speed           = "1" | "2" | "3" | "4" | "5" ;  (* optional POS travel speed *)
 InputPin        = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" ;
 OutputPin       = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" ;
 ```

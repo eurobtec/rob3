@@ -27,12 +27,12 @@ these files.
 |:-----|:-------|:-------|
 | `tbps.md` | ROB3i **TBPS** PC-software manual (PDF) | **READ ONLY** — verbatim extraction |
 | `teachbox.md` | ROB3i **Teachbox** user manual (PDF), **renamed from `README.md` and extended by the owner** | **READ ONLY** — owner-maintained |
-| `language.md` | **owner-authored** TBPS language description (not a PDF extraction) | **READ ONLY** — owner-maintained |
 
 Derived / editable material in this directory:
 
 | File | Status |
 |:-----|:-------|
+| `language.md` | owner-authored TBPS language (source-syntax) spec — editable |
 | `hello_world.tbps` | hand-written example TBPS program (editable) |
 
 > The former `tbps_compiler.py` / `program_loader.py` here used **fabricated
