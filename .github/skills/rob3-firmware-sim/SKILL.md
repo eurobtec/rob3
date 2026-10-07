@@ -222,7 +222,7 @@ Developed against Daniel Drotos' ucSim **0.9.9** source checkout. Get the source
 if it isn't already cloned:
 
 ```bash
-UCSIM=<path-to-ucsim>
+UCSIM=$HOME/github/eurobtec/ucsim
 [ -d "$UCSIM" ] || git clone https://github.com/danieldrotos/ucsim "$UCSIM"
 ```
 

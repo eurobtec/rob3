@@ -69,7 +69,7 @@ set hardware rxd                           print state
 ## Build
 
 ```bash
-make -C simulator/ucsim-modules rxd/rxd.so SDK="<path-to-ucsim>/sdk"
+make -C simulator/ucsim-modules rxd/rxd.so SDK="$HOME/github/eurobtec/ucsim/sdk"
 ```
 
 (or `make -C simulator/ucsim-modules all` to build every plugin.)

@@ -115,7 +115,7 @@ already have it:
 
 ```bash
 # reuse an existing checkout if present, else clone
-UCSIM=<path-to-ucsim>
+UCSIM=$HOME/github/eurobtec/ucsim
 [ -d "$UCSIM" ] || git clone https://github.com/danieldrotos/ucsim "$UCSIM"
 
 cd "$UCSIM"

@@ -12,7 +12,7 @@
 #   HEX=/path/to/@-free rob3.hex
 set -euo pipefail
 
-SIM="${SIM:-}"
+SIM="${SIM:-$HOME/github/eurobtec/ucsim/src/sims/s51.src/ucsim_51}"
 HEX="${HEX:-$(cd "$(dirname "$0")/../../.." && pwd)/simulator/build/rob3.hex}"
 ADC="${ADC:-$(cd "$(dirname "$0")/../../.." && pwd)/simulator/ucsim-modules/adc/adc.so}"
 

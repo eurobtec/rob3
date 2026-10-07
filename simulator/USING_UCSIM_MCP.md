@@ -18,7 +18,7 @@ Both are **verified against this ROM** (reset vector `LJMP 0x0600`, the
 ## 1. MCP server (agent-driven)
 
 A ready config lives at `.kiro/settings/mcp.json`. It pins `UCSIM_BINARY` to the
-**custom** build (`<path-to-ucsim>/.../ucsim_51`) because the ROB3 cl_hw
+**custom** build (`$HOME/github/eurobtec/ucsim/.../ucsim_51`) because the ROB3 cl_hw
 `.so` modules only `loadhw` into the binary they were built against (C++ ABI
 must match — the stock `/usr/bin/ucsim_51` will reject them).
 
@@ -102,7 +102,7 @@ preserving every ROB3-specific convenience the GUI and tests rely on. (The GUI's
 ### Install for tests
 
 ```bash
-pip install -e <path-to-pyucsim>        # until published to an index
+pip install -e $HOME/github/eurobtec/pyucsim        # until published to an index
 # then: UCSIM_51=.../ucsim_51 python3 -m pytest simulator/tests
 ```
 

@@ -25,10 +25,10 @@ import shutil
 import sys
 import time
 
-UCSIM = os.environ.get("UCSIM_51", "")
-ROM_SRC = os.environ.get("ROB3_ROM", "")
-MODS = os.environ.get("ROB3_MODS", "")
-DRIVER = os.environ.get("DRIVER", "")
+UCSIM = os.environ.get("UCSIM_51") or os.path.expanduser("~/github/eurobtec/ucsim/src/sims/s51.src/ucsim_51")
+ROM_SRC = os.environ.get("ROB3_ROM") or os.path.expanduser("~/github/eurobtec/rob3/firmware/legacy/hex/M2764A@DIP28.HEX")
+MODS = os.environ.get("ROB3_MODS") or os.path.expanduser("~/github/eurobtec/rob3/simulator/ucsim-modules")
+DRIVER = os.environ.get("DRIVER") or os.path.expanduser("~/github/eurobtec/rob3_ros2_driver/rob3_driver")
 
 PROMPT = "ROB3SIM>"
 ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")

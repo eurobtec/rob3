@@ -71,7 +71,7 @@ Run it (opt-in; needs the custom `ucsim_51`):
 
 ```bash
 cd simulator
-make sim-adc UCSIM_51=<path-to-ucsim>/src/sims/s51.src/ucsim_51
+make sim-adc UCSIM_51=$HOME/github/eurobtec/ucsim/src/sims/s51.src/ucsim_51
 ```
 
 or drive it directly:

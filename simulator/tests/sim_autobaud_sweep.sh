@@ -47,7 +47,7 @@ set -euo pipefail
 
 SIMFLAGS="${SIMFLAGS:--t 51 -X 11.0592M}"
 SAFEHEX="${SAFEHEX:?SAFEHEX not set}"
-UCSIM_51="${UCSIM_51:-}"
+UCSIM_51="${UCSIM_51:-$HOME/github/eurobtec/ucsim/src/sims/s51.src/ucsim_51}"
 
 # XTAL in Hz for the baud->cycles/bit conversion (must match SIMFLAGS -X).
 XTAL_HZ="${XTAL_HZ:-11059200}"

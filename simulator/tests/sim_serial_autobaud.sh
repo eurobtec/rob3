@@ -30,7 +30,7 @@ set -euo pipefail
 SIM="${SIM:-s51}"
 SIMFLAGS="${SIMFLAGS:--t 51 -X 11.0592M}"
 SAFEHEX="${SAFEHEX:?SAFEHEX not set}"
-UCSIM_51="${UCSIM_51:-}"
+UCSIM_51="${UCSIM_51:-$HOME/github/eurobtec/ucsim/src/sims/s51.src/ucsim_51}"
 
 here="$(cd "$(dirname "$0")/.." && pwd)"
 ADC="$here/ucsim-modules/adc/adc.so"

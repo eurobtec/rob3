@@ -45,7 +45,7 @@ real firmware in ucSim; the axis potentiometers are modelled by the external
 cd simulator/harness/gui
 # with the firmware in the loop (needs the custom ucsim_51 — see
 # ../../ucsim-modules/README.md):
-UCSIM_51=<path-to-ucsim>/src/sims/s51.src/ucsim_51 python3 gui.py
+UCSIM_51=$HOME/github/eurobtec/ucsim/src/sims/s51.src/ucsim_51 python3 gui.py
 
 # plant-only fallback (no custom binary needed):
 python3 gui.py
