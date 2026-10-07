@@ -81,7 +81,8 @@ silently swallowed, so a batch/sentinel read waits forever and hits the timeout.
   `UCSimEngine.push_pots`, which are all immediate and cannot be interrupted).
 - **Reported:** reproducible write-up + patch at
   `simulator/issues/001-pipelined-command-discarded-on-resuser/` (confirmed bug,
-  prepared for upstream submission).
+  reported upstream as ucSim issue
+  [#14](https://github.com/danieldrotos/ucsim/issues/14)).
 
 ### P3.2 idles LOW in ucSim → firmware sits in the EMERGENCY-OFF handler forever
 INT0 (8031 pin 12 = P3.2) is wired to the active-LOW EMERGENCY-OFF line, is
@@ -130,7 +131,9 @@ straight into 0x0003 → 0x0040 and loops in 0x0047..0x0054.
   configurable machine-cycles/bit (through the port write path). Once auto-baud
   sets TH1/TR1 the CORE UART receives normally — so use `-S in=,out=` for the
   actual command bytes and `rxd` only for the pin-level bring-up. Filed as
-  `simulator/issues/003-mcs51-uart-does-not-drive-rxd-txd-pins/`.
+  `simulator/issues/003-mcs51-uart-does-not-drive-rxd-txd-pins/` (reported
+  upstream as ucSim issue
+  [#15](https://github.com/danieldrotos/ucsim/issues/15)).
 
 ### ROB3 serial only works on the AUTO-BAUD path (P3.0=1), not fixed-baud
 The fixed-baud strap path (P3.0=0 at 0x06A7) sets `IE=0x07` (**no ES** — serial

@@ -24,6 +24,16 @@ handler to `cl_serial_hw::set_cmd` (mirroring the existing `raw` sub-command):
 set hardware uart check_often 1
 ```
 
+> **UPDATE 2026-10-07 — this `set_cmd` patch was REVERTED.** The ucSim
+> maintainer pointed out the flag is already a named **configuration-memory**
+> variable (`uc->vars->add(pn+"check_often", …)`), so it is settable on a stock
+> 0.9.9+ build with **no source change and no rebuild**:
+> `expr uart0_check_often=1` (equivalently a direct `uart_0_cfg[0x1]` write).
+> Commit `02b7ec79` was reverted (`c927fcaa`) and the eurobtec ucSim rebuilt;
+> the tests now use `expr uart0_check_often=1`. Patch kept for history at
+> `simulator/issues/004-*/REVERTED-fix-check_often-set_cmd.patch`. The behaviour
+> below is identical either way — only the toggle mechanism changed.
+
 - **ucSim commit** `02b7ec79` on `razr/ucsim` branch `feature/loadable-hw-plugins`
   (pushed). Patch mirrored at
   `simulator/issues/004-*/fix-check_often-set_cmd.patch`.

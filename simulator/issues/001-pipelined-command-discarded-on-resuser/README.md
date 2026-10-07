@@ -3,6 +3,8 @@
 **Component:** command console (`core/cmd.src/newcmd.cc`, `core/sim.src/sim.cc`)
 **Version:** ucSim 0.9.9 (`s51` / `ucsim_51`)
 **Severity:** medium — silent command loss when scripting the simulator
+**Upstream:** reported as ucSim issue
+[#14](https://github.com/danieldrotos/ucsim/issues/14).
 
 ## Summary
 

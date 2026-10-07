@@ -7,12 +7,21 @@ fd. (NOT the UART bit-timing in `serial.cc`, and NOT the single-byte RX slot in
 **ucSim:** 0.9.9
 **Type:** host-input poll-cadence vs. firmware-timeout mismatch (NOT a
 dropped/garbled-byte bug, NOT a crash)
-**Status:** **ROOT CAUSE FOUND + FIXED.** A one-line ucSim addition exposes the
-existing `serconf_check_often` flag as a runtime sub-command
-(`set hardware uart check_often 1`); with it enabled the live socket/pty
-round-trip dispatches. Verified by `simulator/tests/test_issue004_fix.py`
-(Makefile `sim-issue004-fix`). The pre-staged `-S in=<file>` path
-(`test_sim_roundtrip.py`) remains the zero-rebuild default.
+**Status:** **ROOT CAUSE FOUND + RESOLVED (no patch needed).** The existing
+per-UART `serconf_check_often` flag can be toggled at runtime through ucSim's
+**configuration memory** on a stock 0.9.9+ build — `expr uart0_check_often=1`
+(or a direct `uart_0_cfg[0x1]` write) — so the live socket/pty round-trip
+dispatches. **No ucSim source change or rebuild is required.** (An earlier
+attempt added a `set hardware uart check_often` sub-command to
+`cl_serial_hw::set_cmd`; that was **reverted** — see the note below — because
+the config-memory variable already provides the identical effect.) Verified by
+`simulator/tests/test_issue004_fix.py` (Makefile `sim-issue004-fix`). The
+pre-staged `-S in=<file>` path (`test_sim_roundtrip.py`) remains the
+zero-config default.
+**Upstream:** reported as ucSim issue
+[#17](https://github.com/danieldrotos/ucsim/issues/17) (the maintainer's reply
+confirmed the `uart0_check_often` configuration-memory route, so no `set` /
+source change is needed).
 
 ## Auto-baud response across host speeds [SIM]
 
@@ -223,25 +232,40 @@ up slower than the firmware's RX timeout.
 
 ### Fix options
 
-1. **Poll the serial input fd more often during `run`** — **THIS IS THE FIX
-   (applied).** ucSim already has a per-UART flag `serconf_check_often`
+1. **Poll the serial input fd more often during `run`** — **THIS IS THE
+   RESOLUTION.** ucSim already has a per-UART flag `serconf_check_often`
    (`core/sim.src/serial_hw.cc`): when set, `cl_serial::tick()` drains the host
    input fd (`io->input_avail()` → `io->proc_input(0)`) on **every serial tick**
    instead of waiting for the coarse `cl_app::run_go` poll, so queued socket/pty
-   bytes are picked up well inside the firmware's ~1.47M-cycle RX timeout. It was
-   default-false with **no console/CLI way to turn it on**. The fix adds one
-   handler to `cl_serial_hw::set_cmd` so it can be toggled at runtime:
+   bytes are picked up well inside the firmware's ~1.47M-cycle RX timeout.
+
+   The flag is registered as a named **configuration-memory** variable
+   (`serial_hw.cc` does `uc->vars->add(pn+"check_often", …, serconf_check_often, …)`),
+   so it is **toggleable at runtime on a stock ucSim 0.9.9+ with no source change
+   and no rebuild**:
 
    ```
-   set hardware uart check_often 1
+   expr uart0_check_often=1          # named variable (preferred)
+   # or inspect/confirm:
+   info variable often               # -> uart0_check_often  uart_0_cfg[0x1] = …
+   info hardware uart[0]             # cfg cell 0x01 "Check input file at every cycle"
    ```
 
-   (patch: `core/sim.src/serial_hw.cc`, the `STRING NUMBER` branch — mirrors the
-   existing `raw` sub-command, calling `cfg_set(serconf_check_often, port)`.)
-   Rebuild the core lib + relink `ucsim_51`. **No UART-timing or firmware
-   change.** Verified: a live `-S port=` round-trip of `0x4F 0x03` now returns a
-   dispatched all-axis frame (`… 4f 8c 93 b1 8a 87 40 03`) instead of the
-   timeout `0xF1` — see `simulator/tests/test_issue004_fix.py`.
+   > **Note — the `set hardware uart check_often` patch was REVERTED.** An
+   > earlier attempt added a `set_cmd` sub-command (mirroring `raw`) to expose
+   > this flag; it is unnecessary because the config-memory variable above
+   > already provides the identical effect on a stock build. The patch file
+   > `REVERTED-fix-check_often-set_cmd.patch` is kept only for historical
+   > reference and is **not applied**. ucSim maintainer confirmation (upstream
+   > issue [#17](https://github.com/danieldrotos/ucsim/issues/17)): *"You don't
+   > have to
+   > modify the `set` command as this function can be set via configuration
+   > memory … `expr uart0_check_often=1`."*
+
+   Verified: a live `-S port=` round-trip of `0x4F 0x03` returns a dispatched
+   all-axis frame (`… 4f 8c 93 b1 8a 87 40 03`) once `uart0_check_often=1`,
+   instead of the timeout `0xF1` — see `simulator/tests/test_issue004_fix.py`.
+   **No UART-timing or firmware change.**
 
 2. **Drive command bytes under `step`** (what `test_sim_roundtrip.py` does), so
    few firmware cycles pass between bytes — reliable with a **stock** ucSim, no

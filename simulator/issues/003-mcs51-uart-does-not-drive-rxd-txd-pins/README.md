@@ -3,6 +3,8 @@
 **Component:** `src/sims/s51.src/serial.cc` (`cl_serial`), the MCS-51 UART model
 **ucSim:** 0.9.9
 **Type:** modeling limitation (not a crash / not a wrong-result bug)
+**Upstream:** reported as ucSim issue
+[#15](https://github.com/danieldrotos/ucsim/issues/15).
 
 ## Summary
 

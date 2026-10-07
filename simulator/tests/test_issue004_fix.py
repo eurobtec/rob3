@@ -9,22 +9,24 @@ proves the `check_often` fix resolves it:
     the firmware's ~1.47M-cycle serial RX timeout. The frame never completes;
     the firmware stages the 0xF1 reset-ACK. -> reply has NO dispatched frame.
 
-  WITH `set hardware uart check_often 1`: the serial tick() drains the socket fd
-    every tick, so the ETX arrives inside the timeout window and the all-axis
-    query DISPATCHES. -> reply contains a real position frame (header 0x4F ...
-    terminated by ETX 0x03).
+  WITH `expr uart0_check_often=1` (set via ucSim configuration memory, NO patch
+    or rebuild required): the serial tick() drains the socket fd every tick, so
+    the ETX arrives inside the timeout window and the all-axis query DISPATCHES.
+    -> reply contains a real position frame (header 0x4F ... terminated by ETX
+    0x03).
 
 Flow per run:
   1) start ucsim_51 with -S port=<p> (socket) + a command console on a pty-ish
      pipe; load adc + rxd;
   2) reach the auto-baud spin, drive the training byte (rxd) to lock the UART;
   3) connect a TCP client to <p>;
-  4) (fix case) enable check_often;
+  4) (fix case) enable check_often via config memory (expr uart0_check_often=1);
   5) free-run; send 0x4F 0x03 back-to-back on the socket;
   6) read the socket reply and classify.
 
-Opt-in: needs the loader+check_often ucsim_51 and the adc/rxd modules. SKIPS
-cleanly otherwise so a stock `make test` is unaffected.
+Opt-in: needs a loader-enabled ucsim_51 (any stock 0.9.9+ exposes the
+`uart0_check_often` config variable) and the adc/rxd modules. SKIPS cleanly
+otherwise so a stock `make test` is unaffected.
 """
 import os
 import socket
@@ -54,16 +56,23 @@ def need(path, what):
 
 
 def supports_check_often():
-    """Probe: does this ucsim_51 accept `set hardware uart check_often`?"""
+    """Probe: does this ucsim_51 expose the `uart0_check_often` config variable?
+
+    This is standard ucSim configuration memory (serconf_check_often registered
+    via uc->vars->add in serial_hw.cc) — present on a stock 0.9.9+ build, no
+    patch required. We confirm it is writable with `expr`.
+    """
     try:
         p = subprocess.run(
             [UCSIM, "-t", "51", "-X", "11.0592M", "-S", "in=/dev/null,out=/dev/null", HEX],
-            input='set hardware uart check_often 1\nquit\n',
+            input='expr uart0_check_often=1\ninfo variable often\nquit\n',
             capture_output=True, text=True, timeout=10,
         )
     except Exception:
         return False
-    return "check_often = on" in (p.stdout + p.stderr)
+    # the `info variable often` line reports the cell = 1 once set
+    out = p.stdout + p.stderr
+    return "uart0_check_often" in out and "0x00000001" in out
 
 
 def run_roundtrip(enable_fix):
@@ -95,7 +104,8 @@ def run_roundtrip(enable_fix):
         time.sleep(0.4)
         cmd("clear")
         if enable_fix:
-            cmd("set hardware uart check_often 1")
+            # Enable via ucSim configuration memory — no patch/rebuild needed.
+            cmd("expr uart0_check_often=1")
             time.sleep(0.1)
         # connect the host client to the serial socket
         sk = socket.create_connection(("127.0.0.1", PORT), timeout=3)
@@ -143,7 +153,7 @@ def main():
     if not os.access(UCSIM, os.X_OK):
         skip("ucsim_51 not executable")
     if not supports_check_often():
-        skip("this ucsim_51 has no `set hardware uart check_often` (rebuild core)")
+        skip("this ucsim_51 has no `uart0_check_often` config variable (need 0.9.9+)")
 
     fail = 0
 

@@ -6,7 +6,7 @@ pty path that issue 004 used to break:
 
   * ucSim attaches its UART to a real PTY (-S in=<pty>,out=<pty>,raw) and
     free-runs (exactly scripts/sim_bringup.py);
-  * `set hardware uart check_often 1` enables the fix;
+  * `expr uart0_check_often=1` (ucSim config memory) enables the fix;
   * the driver's OWN SerialTransport opens the other end of the pty and its OWN
     protocol codec sends query_all_positions() and parses the reply.
 
@@ -83,14 +83,15 @@ def main():
     rom = "/tmp/rob3_ros2live.hex"
     shutil.copyfile(ROM_SRC, rom)
 
-    # Probe the fix is present in this binary.
+    # Probe the config variable is present in this binary (stock 0.9.9+).
     import subprocess
     probe = subprocess.run(
         [UCSIM, "-t", "51", "-X", "11.0592M", "-S", "in=/dev/null,out=/dev/null", rom],
-        input="set hardware uart check_often 1\nquit\n",
+        input="expr uart0_check_often=1\ninfo variable often\nquit\n",
         capture_output=True, text=True, timeout=10)
-    if "check_often = on" not in (probe.stdout + probe.stderr):
-        skip("this ucsim_51 lacks the check_often fix (rebuild core lib)")
+    if "uart0_check_often" not in (probe.stdout + probe.stderr) \
+            or "0x00000001" not in (probe.stdout + probe.stderr):
+        skip("this ucsim_51 lacks the uart0_check_often config variable (need 0.9.9+)")
 
     # Import the driver's real codec + transport.
     sys.path.insert(0, DRIVER)
@@ -98,8 +99,11 @@ def main():
         import serial  # noqa: F401  (pyserial, used by SerialTransport)
     except Exception:
         skip("pyserial not installed (needed by the driver SerialTransport)")
-    import rob3_driver.protocol as P
-    from rob3_driver.transport import SerialTransport
+    try:
+        import rob3_driver.protocol as P
+        from rob3_driver.transport import SerialTransport
+    except Exception:
+        skip(f"rob3_driver package not importable from DRIVER={DRIVER}")
 
     # Bridge two PTYs with socat so ucSim and the driver each get a real tty
     # device path: ucSim attaches to one end, the driver opens the other.
@@ -154,7 +158,7 @@ def main():
             print("PASS  auto-baud locked (UART up over the live pty)")
         _cmd(cfd, "clear")
         _cmd(cfd, "set hardware adc 3 0x3b")        # recognizable feedback value
-        _cmd(cfd, "set hardware uart check_often 1")  # THE FIX
+        _cmd(cfd, "expr uart0_check_often=1")        # THE FIX (config memory)
         os.write(cfd, b"run\n")                      # free-run; UART live
         time.sleep(0.3)
 

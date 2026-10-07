@@ -10,7 +10,8 @@
 #
 # Requirements on the HOST:
 #   * the rob3-ros2 image (default tag: rob3-ros2:lyrical; override IMAGE=...)
-#   * a check_often-enabled ucsim_51 build at UCSIM_HOST (see issues/004)
+#   * a stock ucsim_51 0.9.9+ build at UCSIM_HOST; the driver enables the
+#     issue-004 fix at runtime via config memory (expr uart0_check_often=1)
 #   * this firmware repo (ROM + cl_hw modules)
 #   * the rob3_ros2_driver checkout (for the test file)
 #

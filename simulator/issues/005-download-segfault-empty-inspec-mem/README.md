@@ -4,6 +4,8 @@
 **Version:** ucSim 0.9.9 (`s51` / `ucsim_51`)
 **Severity:** high — crash (wild-pointer deref) on the documented `download` command
 **Status:** **confirmed bug + repro + patch** (fixed in this project's ucSim checkout)
+**Upstream:** reported as ucSim issue
+[#16](https://github.com/danieldrotos/ucsim/issues/16).
 
 ## Summary
 

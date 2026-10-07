@@ -79,15 +79,15 @@ sim-autobaud-sweep: $(SAFEHEX) ## Behavioral: SWEEP auto-baud across host speeds
 		SWEEP_BAUD="$(SWEEP_BAUD)" SWEEP_CYC="$(SWEEP_CYC)" \
 		$(SIMDIR)/tests/sim_autobaud_sweep.sh
 
-sim-issue004-fix: $(SAFEHEX) ## Behavioral: LIVE socket round-trip proves the `check_often` fix dispatches a frame (opt-in; needs check_often-enabled ucsim_51 + adc/rxd)
+sim-issue004-fix: $(SAFEHEX) ## Behavioral: LIVE socket round-trip proves the `uart0_check_often` config var dispatches a frame (opt-in; needs ucsim_51 0.9.9+ + adc/rxd)
 	@SAFEHEX=$(SAFEHEX) UCSIM_51="$(UCSIM_51)" \
 		python3 $(SIMDIR)/tests/test_issue004_fix.py
 
-sim-ros2-live: $(SAFEHEX) ## Behavioral: the REAL ROS2 driver codec+SerialTransport round-trips over a LIVE pty (proves issue-004 fix end-to-end; needs check_often ucsim_51 + adc/rxd + driver + socat + pyserial)
+sim-ros2-live: $(SAFEHEX) ## Behavioral: the REAL ROS2 driver codec+SerialTransport round-trips over a LIVE pty (proves issue-004 fix end-to-end; needs ucsim_51 0.9.9+ + adc/rxd + driver + socat + pyserial)
 	@UCSIM_51="$(UCSIM_51)" DRIVER="$(DRIVER)" \
 		python3 $(SIMDIR)/tests/verify_ros2_driver_live.py
 
-sim-teleop-ros2: $(SAFEHEX) ## Behavioral: ROS2 TELEOP (JointJog -> rob3_driver -> firmware in free-running ucSim) inside the rob3-ros2 container (proves live teleop; skips w/o docker image + check_often ucsim_51 + driver)
+sim-teleop-ros2: $(SAFEHEX) ## Behavioral: ROS2 TELEOP (JointJog -> rob3_driver -> firmware in free-running ucSim) inside the rob3-ros2 container (proves live teleop; skips w/o docker image + ucsim_51 0.9.9+ + driver)
 	@IMAGE="$(IMAGE)" UCSIM_HOST="$(UCSIM_HOST)" DRIVER_HOST="$(DRIVER_HOST)" \
 		TELEOP_TIMEOUT="$(TELEOP_TIMEOUT)" \
 		$(SIMDIR)/tests/sim_teleop_ros2.sh
