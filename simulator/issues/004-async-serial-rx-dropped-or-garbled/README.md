@@ -4,9 +4,12 @@
 cadence at which `cl_commander::proc_input` is called to read the serial input
 fd. (NOT the UART bit-timing in `serial.cc`, and NOT the single-byte RX slot in
 `serial_hw.cc` — both are fine.)
+
 **ucSim:** 0.9.9
+
 **Type:** host-input poll-cadence vs. firmware-timeout mismatch (NOT a
 dropped/garbled-byte bug, NOT a crash)
+
 **Status:** **ROOT CAUSE FOUND + FIXED.** A one-line ucSim addition exposes the
 existing `serconf_check_often` flag as a runtime sub-command
 (`set hardware uart check_often 1`); with it enabled the live socket/pty
