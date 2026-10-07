@@ -44,10 +44,12 @@
 ;   [SIM] Verified: a 0x47 opcode at 0x8100 is fetched into 0x27 and the PC
 ;   advances 0x8100 -> 0x8108 (an 8-byte instruction slot).
 ;
-; TEACHBOX (TBPS) instruction -> program-opcode map, as decoded here and
-; cross-checked against the TBPS language (hardware/teachbox/README.md) and a
-; compiler verified in ucSim (tools/tbps-compiler).                        [SIM]
-;   MARK m        0x1F        label def (preprocessor only; operand = m)
+; TBPS instruction -> program-opcode map. The opcode VALUES are defined in the
+; shared inc/tbps_isa.inc (the single source of truth, a verbatim copy of the
+; standalone TBPS compiler's header; this interpreter uses those symbols). The
+; notes below are the firmware-specific EXECUTION details (which prog_exec
+; branch, operand handling, verified state) for each opcode.               [SIM]
+;   MARK m        TBPS_MARK   label def (preprocessor only; operand = m)
 ;   POS a . n     0x60|axis   MOVE axis -> target[0x40+axis]; operand = n;
 ;                             arms motion mask 0x2B/0x2C (prog_exec .6=1 .5=1).
 ;                             [SIM] 0x61 0x40 at 0x8100 -> IRAM 0x41 = 0x40;
@@ -238,7 +240,7 @@ L_080B:
         mov SFR_DPH, A                         ; F5 83  0831
         mov SFR_DPL, 0x7E                      ; 85 7E 82  0833
         movx A, @DPTR                       ; E0  0836
-        cjne A, #0x83, L_0880               ; B4 83 46  0837
+        cjne A, #TBPS_HDR_SENT, L_0880      ; B4 83 46  0837  verify end sentinel
 L_083A:
         mov A, #0xF8                        ; 74 F8  083A
 L_083C:
@@ -256,7 +258,7 @@ L_084E:
 L_0850:
         movx A, @DPTR                       ; E0  0850
         jb 0xE7, L_0880                     ; 20 E7 2C  0851
-        cjne A, #0x36, L_0860               ; B4 36 09  0854
+        cjne A, #TBPS_GOTO_COUNT, L_0860    ; B4 36 09  0854  opcode 0x36 -> 3-byte instr
         inc DPTR                            ; A3  0857
         inc DPTR                            ; A3  0858
         inc DPTR                            ; A3  0859
@@ -265,7 +267,7 @@ L_0850:
         mov A, #0xF5                        ; 74 F5  085C
         sjmp L_083C                         ; 80 DC  085E
 L_0860:
-        cjne A, #0x1F, L_083A               ; B4 1F D7  0860
+        cjne A, #TBPS_MARK, L_083A          ; B4 1F D7  0860  opcode 0x1F = MARK
         inc DPTR                            ; A3  0863
         movx A, @DPTR                       ; E0  0864
         rl A                                ; 23  0865
@@ -287,7 +289,7 @@ L_0880:
         anl STATE_FLAGS, #0x01                     ; 53 28 01  0880
         mov SFR_DPL, #0xFD                     ; 75 82 FD  0883
         mov SFR_DPH, PROG_PAGE                      ; 85 3E 83  0886
-        mov A, #0x80                        ; 74 80  0889
+        mov A, #TBPS_END                    ; 74 80  0889  end marker (bit7 set)
         movx @DPTR, A                       ; F0  088B
         inc DPTR                            ; A3  088C
         clr A                               ; E4  088D
@@ -297,57 +299,20 @@ L_0880:
         inc DPTR                            ; A3  0894
         movx @DPTR, A                       ; F0  0895
         inc DPTR                            ; A3  0896
-        mov A, #0x83                        ; 74 83  0897
+        mov A, #TBPS_HDR_SENT               ; 74 83  0897  0x83 sentinel
         movx @DPTR, A                       ; F0  0899
         ret                                 ; 22  089A
 ; --- 0x089B..0x08FF : 0xFF-count 101 0xFF EPROM padding (objcopy gap-fill) ---
-;
-;==============================================================================
-; motion_exec (0x0900) — main-loop gate: advances motion, on step completion
-;   (or TIM/IF wait) fetches the next instruction via prog_exec.
-;==============================================================================
-        .org    0x0900
-        jb 0x44, L_0906                     ; 20 44 03  0900
-        jnb 0x43, L_0940                    ; 30 43 3A  0903
-L_0906:
-        mov SFR_DPH, #0x51                     ; 75 83 51  0906
-        mov A, 0x1F                         ; E5 1F  0909
-        movx @DPTR, A                       ; F0  090B
-        mov A, 0x26                         ; E5 26  090C
-        jz L_0941                           ; 60 31  090E
-        jnb 0xE0, L_091E                    ; 30 E0 0B  0910
-        mov A, 0x21                         ; E5 21  0913
-        cjne A, #0x3F, L_0940               ; B4 3F 28  0915
-        mov A, 0x2B                         ; E5 2B  0918
-        jnz L_0940                          ; 70 24  091A
-        sjmp L_093B                         ; 80 1D  091C
-L_091E:
-        jnb 0xE1, L_092E                    ; 30 E1 0D  091E
-        jnb 0x1D, L_0940                    ; 30 1D 1C  0921
-        clr 0x1D                            ; C2 1D  0924
-        djnz 0x1A, L_0940                   ; D5 1A 17  0926
-        djnz 0x1B, L_0940                   ; D5 1B 14  0929
-        sjmp L_093B                         ; 80 0D  092C
-L_092E:
-        mov A, 0x90                         ; E5 90  092E
-        jnb 0x38, L_0937                    ; 30 38 04  0930
-        anl A, R7                           ; 5F  0933
-        jz L_093B                           ; 60 05  0934
-        ret                                 ; 22  0936
-L_0937:
-        orl A, R7                           ; 4F  0937
-        cjne A, #0xFF, L_0940               ; B4 FF 05  0938
-L_093B:
-        mov 0x26, #0x00                     ; 75 26 00  093B
-        clr 0x44                            ; C2 44  093E
-L_0940:
-        ret                                 ; 22  0940
+; --- 0x0900..0x0940 : motion_exec (the main-loop MOTION gate) lives in
+;     motion_exec.asm; it is the servo tick that calls prog_exec, not part of
+;     the interpreter. rob3.asm includes it between prog_init and prog_exec. ---
 ;
 ;==============================================================================
 ; prog_exec (0x0941) — instruction executor: fetches opcode from SRAM into 0x27,
 ;   decodes with the SAME bit fields as the RS-232 dispatch, most instructions
 ;   occupy an 8-byte slot (PC += 8).
 ;==============================================================================
+        .org    0x0941
 L_0941:
         clr 0x44                            ; C2 44  0941
         mov SFR_DPL, 0x66                      ; 85 66 82  0943
@@ -469,7 +434,7 @@ L_09F1:
         setb 0x32                           ; D2 32  09FD
         setb 0x44                           ; D2 44  09FF
 L_0A01:
-        mov A, #0x08                        ; 74 08  0A01
+        mov A, #TBPS_SLOT                   ; 74 08  0A01  default 8-byte slot (PC += 8)
 L_0A03:
         add A, 0x66                         ; 25 66  0A03
         mov 0x66, A                         ; F5 66  0A05

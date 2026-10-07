@@ -2,7 +2,7 @@
 #==============================================================================
 # This directory holds the ANNOTATED, ASSEMBLING source for the ROB3 8031
 # firmware. The top unit rob3.asm includes the symbolic equates (inc/*.inc) and
-# every code region (vectors/ext0/timer0/ext1/rs232/init/main/program/teachbox/
+# every code region (vectors/ext0/timer0/ext1/rs232/init/main/tbps_interpreter/teachbox/
 # tables) in address order. The goal is a build whose 8 KB output is
 # BYTE-IDENTICAL to the original EPROM image:
 #
@@ -35,7 +35,8 @@ ROMSIZE    := 8192
 TOP        := rob3.asm
 # Region sources (documented; the assembler pulls them via rob3.asm .include).
 REGIONS    := vectors.asm ext0_estop.asm timer0_tick.asm ext1_servo.asm \
-              rs232.asm init.asm main.asm program.asm teachbox.asm tables.asm
+              rs232.asm init.asm main.asm tbps_interpreter.asm motion_exec.asm \
+              teachbox.asm tables.asm
 INCS       := $(wildcard inc/*.inc)
 
 # Per-region ROM address / length (for the `regions` conversion aid).
@@ -47,7 +48,7 @@ REGION_MAP := vectors:0x0000:0x38 \
               rs232:0x0203:0x385 \
               init:0x0600:0x14D \
               main:0x074D:0xA5 \
-              program:0x0800:0x242 \
+              tbps_interpreter:0x0800:0x242 \
               teachbox:0x0C00:0x3C5 \
               tables:0x0FC5:0x19
 
@@ -101,9 +102,12 @@ verify-region: | $(BUILD) ## Verify ONE region: make verify-region REGION=<name>
 	orgd=$$(printf '%d' $$org); lend=$$(printf '%d' $$len); \
 	printf '        .area CODE (ABS)\n' > $(BUILD)/_r_$(REGION).asm; \
 	for i in inc/sfr.inc inc/devices.inc inc/system.inc inc/servo.inc \
-	         inc/teachbox.inc inc/serial.inc inc/program.inc; do \
+	         inc/teachbox.inc inc/serial.inc inc/tbps_isa.inc inc/tbps_interpreter.inc; do \
 	  printf '        .include "%s"\n' "$$PWD/$$i" >> $(BUILD)/_r_$(REGION).asm; done; \
 	printf '        .include "%s"\n' "$$PWD/$(REGION).asm" >> $(BUILD)/_r_$(REGION).asm; \
+	if [ "$(REGION)" = "tbps_interpreter" ]; then \
+	  printf '        .include "%s"\n' "$$PWD/motion_exec.asm" >> $(BUILD)/_r_$(REGION).asm; \
+	fi; \
 	$(AS) -l -s -o $(BUILD)/_r_$(REGION).rel $(BUILD)/_r_$(REGION).asm || exit 1; \
 	$(LD) -i -m $(BUILD)/_r_$(REGION).ihx $(BUILD)/_r_$(REGION).rel || exit 1; \
 	$(OBJCOPY) -I ihex -O binary --gap-fill=0xFF --pad-to=$$((orgd + lend)) \

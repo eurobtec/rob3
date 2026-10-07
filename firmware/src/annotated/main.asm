@@ -126,7 +126,7 @@ ml_no_serial:
 ;--- check gates, then poll teachbox or run program ---
 ml_poll_gate:
         clr     PSW_RS1             ; C2 D4     PSW.4 = 0 (back to bank 0)
-        lcall   0x0900              ; 12 09 00  motion executor gate (program.asm) [INFER]
+        lcall   0x0900              ; 12 09 00  motion executor gate (motion_exec.asm) [INFER]
         setb    IE_EA               ; D2 AF     EA = 1 (re-enable ints)
         jnb     SYS_TIMER_REQ,main_loop ; 30 04 AC  0x20.4 not set -> loop
         jnb     SYS_BAUD_DET,main_loop  ; 30 02 A9  baud not ready -> loop
@@ -141,7 +141,7 @@ ml_poll_gate:
         mov     PROG_EXEC_CTRL,A    ; F5 26     clear program exec control
         mov     PC_LO,A             ; F5 66     reset program PC low
         mov     PC_HI,PROG_PAGE1    ; 85 3F 67  PC high = body page
-        lcall   0x0803              ; 12 08 03  call prog_prepare (program.asm)
+        lcall   0x0803              ; 12 08 03  call prog_prepare (tbps_interpreter.asm)
         jnb     STATE_PROG_LOAD,ml_return ; 30 41 10  no program loaded -> skip
         mov     DOUT_SHADOW,#0xFF   ; 75 1F FF  idle the digital-out shadow
         orl     STATE_FLAGS,#0x0C   ; 43 28 0C  set 0x28.2/.3 (running+motion)

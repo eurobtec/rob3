@@ -196,7 +196,7 @@
 ;   8-byte slot and updates the SRAM header. Verified end-to-end in ucSim
 ;   (teachbox+loopback+adc, from the main loop): tapping MARK, 0, ENT stores
 ;   opcode 0x1F at 0x8100 and advances the PC 0x8100 -> 0x8108 — matching the
-;   program interpreter's encoding (program.asm) and the TBPS compiler
+;   program interpreter's encoding (tbps_interpreter.asm) and the TBPS compiler
 ;   (tools/tbps-compiler). Key index = row+1 + (group-1)*8 (row = 74LS138 /Y,
 ;   group = P1 column 1..3); ENT = index 0x0E = (row 5, group 2). Entry needs
 ;   the program PC/pages (0x3E=0x80,0x3F=0x81) + INPUT mode set up by the
@@ -614,7 +614,7 @@ L_0D8E:
 ;   SRAM header. Verified [SIM]: typing MARK,0,ENT stores 0x1F at 0x8100 and
 ;   advances the PC to 0x8108 (see simulator/tests/test_teachbox_typing.py and
 ;   the header note above). This is the SAME store the serial 0x81 uploader and
-;   the program interpreter (program.asm) use — one program store, two inputs.
+;   the program interpreter (tbps_interpreter.asm) use — one program store, two inputs.
 ;==============================================================================
 L_0DA5:
         mov 0x82, 0x66                      ; 85 66 82  0DA5  DPL = program PC lo

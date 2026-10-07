@@ -7,7 +7,7 @@
 ; shared system flag bytes and their bit definitions. Subsystem-owned bytes
 ; (per-axis arrays, teachbox editor state, serial buffers, program state) are
 ; declared in their own includes (servo.inc / teachbox.inc / serial.inc /
-; program.inc); this file is the single place that documents the WHOLE 0x00..
+; tbps_interpreter.inc); this file is the single place that documents the WHOLE 0x00..
 ; 0x7F layout and owns the cross-cutting system flags (0x20, 0x23, 0x28).
 ;
 ;   Syntax: SDAS/ASxxxx (sdas8051) `NAME = value`.
@@ -36,8 +36,8 @@
 ;   0x1F  Digital-output latch shadow (Port B mirror)   -> DOUT_SHADOW
 ;   0x20-2F  BIT-ADDRESSABLE FLAG AREA (see below)
 ;   0x30-31  DPTR shadow for serial TX (program up/download)
-;   0x3E  ext-RAM program page hi (base of programs)    -> PROG_PAGE  (program.inc)
-;   0x3F  ext-RAM program page hi + 1                   -> PROG_PAGE1 (program.inc)
+;   0x3E  ext-RAM program page hi (base of programs)    -> PROG_PAGE  (tbps_interpreter.inc)
+;   0x3F  ext-RAM program page hi + 1                   -> PROG_PAGE1 (tbps_interpreter.inc)
 ;   0x40-45  Axis target positions (6)                  -> TARGET_BASE (servo.inc)
 ;   0x46  Teach-pendant row-strobe / display register   -> KBD_STROBE (teachbox.inc)
 ;   0x47  LED / display output value                    -> LED_LATCH  (teachbox.inc)
@@ -48,11 +48,11 @@
 ;   0x58-5D  Axis feedback values from ADC (6)          -> FB_BASE (servo.inc)
 ;   0x5E-5F  Additional digital-I/O state (hidden DI cmds)
 ;   0x60-65  Serial RX buffer (6 axis bytes)            -> RX_BUF (serial.inc)
-;   0x66-67  Program counter (offset in ext-RAM)        -> PC_LO/PC_HI (program.inc)
+;   0x66-67  Program counter (offset in ext-RAM)        -> PC_LO/PC_HI (tbps_interpreter.inc)
 ;   0x68-6E  Serial command buffer                      -> (serial.inc)
 ;   0x6D-6E  POS digit-entry accumulator (aliases 0x6D/0x6E) -> ARG_ACC_LO/HI (teachbox.inc)
 ;   0x70-75  Axis deceleration profile (6)              -> DECEL_BASE (servo.inc)
-;   0x76-77  Program memory end pointer                 -> (program.inc)
+;   0x76-77  Program memory end pointer                 -> (tbps_interpreter.inc)
 ;   0x78-7F  Axis state-machine workspace (INT1 ISR)    -> ISRWS_BASE (servo.inc)
 ;==============================================================================
 
@@ -72,7 +72,7 @@ TXDPTR_SHADOW   = 0x30          ; DPTR shadow for serial TX (0x30:0x31)
 ;------------------------------------------------------------------------------
 ; Byte owners: 0x20/0x23/0x28 are cross-cutting SYSTEM flags (defined here).
 ; 0x21/0x22/0x2B/0x2C/0x2D are servo masks (servo.inc); 0x24/0x25/0x26/0x27 are
-; serial/program state (serial.inc / program.inc); 0x29/0x2A are the editor
+; serial/program state (serial.inc / tbps_interpreter.inc); 0x29/0x2A are the editor
 ; (teachbox.inc). The bytes are all listed in the IRAM MAP above; each owner
 ; include defines that byte's symbol and its bit names.
 ;------------------------------------------------------------------------------

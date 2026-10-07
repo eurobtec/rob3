@@ -43,7 +43,8 @@
         .include "inc/servo.inc"        ; per-axis arrays + servo masks  (ext1_servo.asm)
         .include "inc/teachbox.inc"     ; keypad / editor state          (teachbox.asm)
         .include "inc/serial.inc"       ; RS-232 workspace + constants   (rs232.asm)
-        .include "inc/program.inc"      ; interpreter workspace + opcodes (program.asm)
+        .include "inc/tbps_isa.inc"     ; TBPS instruction set (shared copy; == compiler's)
+        .include "inc/tbps_interpreter.inc"      ; interpreter workspace + routine entries
 
 ;------------------------------------------------------------------------------
 ; Code regions, in ascending ROM-address order. Each file `.org`s at its true
@@ -60,7 +61,9 @@
 ;                                       TX helper (0x0541)
 ;   init.asm           0x0600..0x074C   reset initialization sequence
 ;   main.asm           0x074D..0x07F1   main loop (flag poll: teachbox/serial/prog)
-;   program.asm        0x0800..0x0A41   prog init (0x0800) + interpreter
+;   tbps_interpreter.asm 0x0800..0x089A + 0x0941..0x0A41  TBPS interpreter
+;                                       (prog_init/prepare, prog_exec, prog_goto)
+;   motion_exec.asm    0x0900..0x0940   main-loop motion gate (calls prog_exec)
 ;   teachbox.asm       0x0C00..0x0FC4   keypad scanner + editor + POS entry + jog
 ;   tables.asm         0x0FC5..0x0FDD   shared bit/const lookup table(s)
 ;------------------------------------------------------------------------------
@@ -71,7 +74,8 @@
         .include "rs232.asm"
         .include "init.asm"
         .include "main.asm"
-        .include "program.asm"
+        .include "tbps_interpreter.asm"
+        .include "motion_exec.asm"
         .include "teachbox.asm"
         .include "tables.asm"
 
