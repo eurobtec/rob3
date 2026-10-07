@@ -641,7 +641,7 @@
 ;   with xxd: entry 0x0300, serial_exit 0x0525, RETI 0x052E, ACALL 0x0541 to
 ;   the TX helper).
 ;
-;   [SIM] runs (ucsim_51 0.9.9, `-t 51 -X 11.0592M simulator/build/rob3.hex`),
+;   [SIM] runs (ucsim_51 0.9.9, `-t 51 -X 11.0592M <rob3.hex>`),
 ;   entering at the relevant address with seeded IRAM/A and a breakpoint at the
 ;   common exit:
 ;     - READ feedback (enter 0x0440, A=0x47, 0x58..=11 22 33 44 55 66) ->
@@ -654,7 +654,7 @@
 ;     - RESET-ACK (enter 0x0785, 0x23.7=1 0x24.2=1 0x18=1) -> R4=0xF1,
 ;       0x24 low nibble cleared, 0x25.3 set.
 ;
-;   [SIM] END-TO-END over the REAL wire (simulator/tests/sim_serial_e2e.sh,
+;   [SIM] END-TO-END over the REAL wire (rob3_ucsim: simulator/tests/sim_serial_e2e.sh,
 ;   loader ucsim_51 + adc + rxd cl_hw modules + `-S in=,out=` serial link):
 ;     - the rxd module shifts the auto-baud training byte 0x20 on P3.0; the ROM
 ;       locks (TH1=0xFC, TR1, IE=0x17) and transmits its 0x15 ACK on the serial
@@ -667,7 +667,7 @@
 ;   entries above stop short of. (Note: `MOV A,SBUF` reads the model's s_in, so
 ;   the seeded-entry tests deliberately bypass it; the e2e test uses the real
 ;   UART path once the baud is set.) See also
-;   simulator/issues/003-mcs51-uart-does-not-drive-rxd-txd-pins.
+;   rob3_ucsim: simulator/issues/003-mcs51-uart-does-not-drive-rxd-txd-pins.
 ;
 ;   ucSim serial note: `MOV A,SBUF` returns the model's internal `s_in`, NOT the
 ;   SBUF SFR cell (cl_serial::read in src/sims/s51.src/serial.cc), and a write
@@ -678,7 +678,7 @@
 ;   IRAM/registers; a fully end-to-end feed would use ucSim's `-S` serial input.
 ;
 ;   NOT assembled: this is a documentation listing; the golden byte-match build
-;   uses simulator/*.a51, not the annotated files.
+;   uses rob3_ucsim: simulator/*.a51, not the annotated files.
 ;==============================================================================
 
 ;==============================================================================

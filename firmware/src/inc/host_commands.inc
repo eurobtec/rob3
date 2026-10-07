@@ -16,7 +16,7 @@
 ;   are the axis (0..5; 7 = "all axes"); bit3 is the acknowledge-request R bit.
 ;
 ; Values are [BYTE]/[SIM]-verified against the ROB3 8031 ROM (see
-; hardware/host/command.md "ROM confirmation" + simulator/tests/sim_serial.sh).
+; hardware/host/command.md "ROM confirmation" + rob3_ucsim: simulator/tests/sim_serial.sh).
 ; The stored-program *instruction* bytes reuse these same low-level bit fields;
 ; that program instruction set is defined separately in inc/tbps_isa.inc.
 ;

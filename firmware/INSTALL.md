@@ -1,8 +1,8 @@
 # INSTALL
 
 Toolchain prerequisites for assembling and simulating the ROB3 firmware
-(see [`../simulator/BUILD.md`](../simulator/BUILD.md) for how to actually build
-and test).
+(assemble the golden image in `src/`; behavioral ucSim tests live in
+the eurobtec/rob3_ucsim repo).
 
 ## What you need
 
@@ -67,7 +67,7 @@ sudo dnf install -y sdcc binutils make python3
 brew install sdcc binutils make python3
 # Homebrew's sdcc includes the ucSim simulators (s51).
 # Homebrew binutils installs as gobjcopy; either symlink it to objcopy on
-# PATH or edit OBJCOPY in the Makefile (see ../simulator/BUILD.md).
+# PATH or edit OBJCOPY in the Makefile (see src/Makefile).
 ```
 
 ### From source (SDCC + ucSim)
@@ -88,7 +88,7 @@ python3 --version
 ```
 
 All five must resolve on your `PATH`. Then proceed to
-[`../simulator/BUILD.md`](../simulator/BUILD.md).
+the golden build in [`src/`](src/) (behavioral tests: eurobtec/rob3_ucsim).
 
 ## Troubleshooting
 
@@ -96,7 +96,7 @@ All five must resolve on your `PATH`. Then proceed to
   always pulled in by `sdcc`.
 - **`objcopy: command not found` (macOS)** — Homebrew names it `gobjcopy`.
   Symlink it or set `OBJCOPY=gobjcopy` when invoking `make` (see
-  ../simulator/BUILD.md).
+  src/Makefile).
 - **Filename with `@`** — the shipped ROM image is `hex/M2764A@DIP28.HEX`. The
-  Makefile copies it to a shell-safe `simulator/build/rob3.hex` automatically;
+  build/test rig copies it to a shell-safe `build/rob3.hex` automatically;
   you do not need to rename anything by hand.

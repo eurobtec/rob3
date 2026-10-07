@@ -200,7 +200,7 @@
 ;   (tools/tbps-compiler). Key index = row+1 + (group-1)*8 (row = 74LS138 /Y,
 ;   group = P1 column 1..3); ENT = index 0x0E = (row 5, group 2). Entry needs
 ;   the program PC/pages (0x3E=0x80,0x3F=0x81) + INPUT mode set up by the
-;   STOP-0 header. Test: simulator/tests/test_teachbox_typing.py.
+;   STOP-0 header. Test: rob3_ucsim: simulator/tests/test_teachbox_typing.py.
 ;
 ; IMPORTANT byte-vs-bit note: `jb 0x57` / `jb 0x56` use BIT addresses, i.e.
 ; bit 0x57 = byte 0x2A bit 7, bit 0x56 = byte 0x2A bit 6, and `setb 0x57`,
@@ -612,7 +612,7 @@ L_0D8E:
 ;   editor buffers (0x50.. / 0x6C/0x6D depending on the instruction class),
 ;   zero-pads to the 8-byte slot (L_0DE1), then writes 0x66:0x67 back and the
 ;   SRAM header. Verified [SIM]: typing MARK,0,ENT stores 0x1F at 0x8100 and
-;   advances the PC to 0x8108 (see simulator/tests/test_teachbox_typing.py and
+;   advances the PC to 0x8108 (see rob3_ucsim: simulator/tests/test_teachbox_typing.py and
 ;   the header note above). This is the SAME store the serial 0x81 uploader and
 ;   the program interpreter (tbps_interpreter.asm) use — one program store, two inputs.
 ;==============================================================================

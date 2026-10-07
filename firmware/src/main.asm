@@ -55,7 +55,7 @@
 ; SIM IMPLICATION: to exercise the real keypad path in ucSim you must present
 ; P3.2=1 and P3.4=1 (the "RS-232 shorting connector present" pin state) and
 ; HOLD the key across several scan passes. The `loopback` cl_hw module
-; (simulator/ucsim-modules/loopback/) drives P3.2/P3.4 for exactly this reason.
+; (rob3_ucsim: simulator/ucsim-modules/loopback/) drives P3.2/P3.4 for exactly this reason.
 ;------------------------------------------------------------------------------
         ; org 0x074D
 ; main_loop:
