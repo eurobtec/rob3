@@ -57,7 +57,7 @@ AS         := sdas8051
 LD         := sdld
 OBJCOPY    := objcopy
 
-.PHONY: all build verify verify-regions regions status clean help
+.PHONY: all build verify verify-regions regions status clean help test
 
 all: build ## Assemble + link + pad to an 8 KB image
 
@@ -137,6 +137,9 @@ status: ## Verify every region individually and report PASS/FAIL
 	@for spec in $(REGION_MAP); do \
 		name=$${spec%%:*}; $(MAKE) --no-print-directory verify-region REGION=$$name || true; \
 	done
+
+test: ## Run the firmware consistency test suite (golden match + regions + SHA pin)
+	@python3 -m pytest ../tests -q
 
 clean: ## Remove build artifacts
 	rm -rf $(BUILD)

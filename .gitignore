@@ -31,6 +31,7 @@
 !/.kiro/skills/ucsim/SKILL.md
 
 # Python bytecode
+.pytest_cache/
 __pycache__/
 *.pyc
 
