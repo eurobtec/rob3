@@ -16,7 +16,7 @@
 # still passes.
 #
 # Point it at the binary via UCSIM_51=/path/to/ucsim_51, or it probes:
-#   $UCSIM_51, ucsim_51 on PATH, ~/github/danieldrotos/ucsim/src/sims/s51.src/ucsim_51
+#   $UCSIM_51, ucsim_51 on PATH, <path-to-ucsim>/src/sims/s51.src/ucsim_51
 set -euo pipefail
 
 SIMFLAGS="${SIMFLAGS:--t 51 -X 11.0592M}"
@@ -25,8 +25,6 @@ SAFEHEX="${SAFEHEX:?SAFEHEX not set}"
 find_ucsim51() {
   if [[ -n "${UCSIM_51:-}" && -x "${UCSIM_51}" ]]; then echo "$UCSIM_51"; return; fi
   if command -v ucsim_51 >/dev/null 2>&1; then command -v ucsim_51; return; fi
-  local p="$HOME/github/danieldrotos/ucsim/src/sims/s51.src/ucsim_51"
-  [[ -x "$p" ]] && { echo "$p"; return; }
   echo ""
 }
 

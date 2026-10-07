@@ -34,8 +34,7 @@ import subprocess
 import sys
 import time
 
-HOME = os.path.expanduser("~")
-UCSIM = os.environ.get("UCSIM_51") or f"{HOME}/github/razr/ucsim/src/sims/s51.src/ucsim_51"
+UCSIM = os.environ.get("UCSIM_51", "")
 HERE = os.path.dirname(os.path.abspath(__file__))
 SIM = os.path.dirname(HERE)
 ADC = f"{SIM}/ucsim-modules/adc/adc.so"

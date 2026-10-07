@@ -29,8 +29,7 @@ SAFEHEX="${SAFEHEX:?SAFEHEX not set}"
 find_ucsim51() {
   if [[ -n "${UCSIM_51:-}" && -x "${UCSIM_51}" ]]; then echo "$UCSIM_51"; return; fi
   if command -v ucsim_51 >/dev/null 2>&1; then command -v ucsim_51; return; fi
-  local p="$HOME/github/danieldrotos/ucsim/src/sims/s51.src/ucsim_51"
-  [[ -x "$p" ]] && echo "$p" || echo ""
+  echo ""
 }
 U="$(find_ucsim51)"
 if [[ -z "$U" ]] || ! printf 'set hardware teachbox 0 1\nquit\n' \

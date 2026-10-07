@@ -9,9 +9,9 @@
 # Needs: a loader-enabled ucsim_51 (UCSIM_51) + the adc & rxd cl_hw modules.
 set -euo pipefail
 
-UCSIM_51="${UCSIM_51:-$HOME/github/razr/ucsim/src/sims/s51.src/ucsim_51}"
-MODS="${ROB3_MODS:-$HOME/github/razr/rob3/simulator/ucsim-modules}"
-ROM_SRC="${ROB3_ROM:-$HOME/github/razr/rob3/firmware/legacy/hex/M2764A@DIP28.HEX}"
+UCSIM_51="${UCSIM_51:-}"
+MODS="${ROB3_MODS:-}"
+ROM_SRC="${ROB3_ROM:-}"
 ROM=/tmp/rob3_issue004.hex
 cp "$ROM_SRC" "$ROM"
 

@@ -9,7 +9,7 @@ discovered while simulating the ROB3 8031 firmware. Each issue folder contains:
   the reproduction behaves after applying it.
 
 Verified against the ucSim **0.9.9** checkout used by this project
-(`~/github/danieldrotos/ucsim`). Line numbers refer to that tree.
+(`<path-to-ucsim>`). Line numbers refer to that tree.
 
 > Scope note: these are genuine ucSim *behaviour* bugs, not the ROB3 "missing
 > peripheral" modelling gaps (no 8255/ADC/decoder) — those are handled by the

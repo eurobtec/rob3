@@ -73,7 +73,7 @@ else die "instr 3 (END) did not stop the program" "$O3"; fi
 # With a loader ucsim_51 + the adc module, init reaches the main loop and the
 # main-loop motion_exec (0x08FF) fetches/executes the program with no manual
 # prog_exec entry. This is the true "load and run".
-UCSIM_51="${UCSIM_51:-$HOME/github/razr/ucsim/src/sims/s51.src/ucsim_51}"
+UCSIM_51="${UCSIM_51:-}"
 ADC="$(cd "$(dirname "$0")/.." && pwd)/ucsim-modules/adc/adc.so"
 if [ -x "$UCSIM_51" ] && [ -f "$ADC" ] && \
    printf 'loadhw "%s"\nquit\n' "$ADC" | timeout 10 "$UCSIM_51" $SIMFLAGS "$SAFEHEX" 2>&1 | grep -qi 'id_string=adc'; then

@@ -89,11 +89,11 @@ firmware-timing characterization, separate from this module. See the main-loop
 
 Built as a loadable plugin against the ucSim SDK (see `../README.md` for
 details). In this checkout the SDK is the in-tree one at
-`~/github/razr/ucsim/sdk` (not installed to `/usr/local`), so pass `SDK=`:
+`<path-to-ucsim>/sdk` (not installed to `/usr/local`), so pass `SDK=`:
 
 ```bash
 cd ..                 # simulator/ucsim-modules/
-make SDK="$HOME/github/razr/ucsim/sdk"      # -> loopback/loopback.so
+make SDK="<path-to-ucsim>/sdk"      # -> loopback/loopback.so
 # (or `make` alone if the SDK is installed under /usr/local)
 
 # then in ucsim_51:

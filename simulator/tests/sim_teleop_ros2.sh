@@ -22,8 +22,8 @@ set -euo pipefail
 IMAGE="${IMAGE:-rob3-ros2:lyrical}"
 HERE="$(cd "$(dirname "$0")/.." && pwd)"               # simulator/
 ROB3="$(cd "$HERE/.." && pwd)"                          # repo root
-UCSIM_HOST="${UCSIM_HOST:-$HOME/github/razr/ucsim}"
-DRIVER_HOST="${DRIVER_HOST:-$HOME/github/eurobtec/rob3_ros2_driver/rob3_driver}"
+UCSIM_HOST="${UCSIM_HOST:?set UCSIM_HOST to your ucsim checkout}"
+DRIVER_HOST="${DRIVER_HOST:?set DRIVER_HOST to your rob3_ros2_driver checkout}"
 TIMEOUT="${TELEOP_TIMEOUT:-150}"
 
 skip() { echo "SKIP  $1"; echo "sim_teleop_ros2: SKIPPED"; exit 0; }

@@ -10,10 +10,10 @@ SDK** and loaded at runtime with `loadhw` — they are **no longer compiled into
 (`ucsim/sdk/`, `make install`); see that SDK's `README.md`.
 
 > **This checkout's SDK location:** the ucSim source tree is at
-> **`~/github/razr/ucsim`**, so the in-tree plugin SDK is
-> **`~/github/razr/ucsim/sdk`** (headers under `~/github/razr/ucsim/sdk/include`,
-> build fragment `~/github/razr/ucsim/sdk/ucsim-plugin.mk`). It is **not**
-> installed to `/usr/local`, so pass `SDK=~/github/razr/ucsim/sdk` when building
+> **`<path-to-ucsim>`**, so the in-tree plugin SDK is
+> **`<path-to-ucsim>/sdk`** (headers under `<path-to-ucsim>/sdk/include`,
+> build fragment `<path-to-ucsim>/sdk/ucsim-plugin.mk`). It is **not**
+> installed to `/usr/local`, so pass `SDK=<path-to-ucsim>/sdk` when building
 > (see "Build these plugins" below).
 
 Each module lives in its own subfolder with its own README:
@@ -34,7 +34,7 @@ The loader (`loadhw`/`insmod` + `-rdynamic`/`-ldl`) is compiled into `ucsim_51`,
 and the SDK headers are installed, by building/installing ucSim:
 
 ```bash
-cd <ucsim>            # e.g. ~/github/razr/ucsim
+cd <ucsim>            # e.g. <path-to-ucsim>
 ./configure --prefix=/usr/local
 make
 sudo make install     # installs ucsim_51 AND the plugin SDK
@@ -53,11 +53,11 @@ make SDK=<ucsim>/sdk                   # against an in-tree (non-installed) SDK
 ```
 
 **In this checkout** the SDK is not installed to `/usr/local`, so build against
-the in-tree SDK at `~/github/razr/ucsim/sdk` (headers are already exported):
+the in-tree SDK at `<path-to-ucsim>/sdk` (headers are already exported):
 
 ```bash
-make -C simulator/ucsim-modules SDK="$HOME/github/razr/ucsim/sdk" all
-# from inside simulator/ucsim-modules/:  make SDK="$HOME/github/razr/ucsim/sdk"
+make -C simulator/ucsim-modules SDK="<path-to-ucsim>/sdk" all
+# from inside simulator/ucsim-modules/:  make SDK="<path-to-ucsim>/sdk"
 ```
 
 Produces `loopback/loopback.so`, `adc/adc.so`, `teachbox/teachbox.so`.

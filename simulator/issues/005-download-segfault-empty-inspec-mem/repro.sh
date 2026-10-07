@@ -10,8 +10,8 @@
 # Usage:  UCSIM_51=/path/to/ucsim_51 ./repro.sh
 set -u
 
-UC="${UCSIM_51:-$HOME/github/eurobtec/ucsim/src/sims/s51.src/ucsim_51}"
-HEX="${ROB3_HEX:-$HOME/github/eurobtec/rob3/firmware/legacy/hex/M2764A@DIP28.HEX}"
+UC="${UCSIM_51:-}"
+HEX="${ROB3_HEX:-}"
 
 if [ ! -x "$UC" ]; then echo "SKIP: ucsim_51 not found at $UC (set UCSIM_51)"; exit 0; fi
 # @-free copy (unrelated issue 002)
