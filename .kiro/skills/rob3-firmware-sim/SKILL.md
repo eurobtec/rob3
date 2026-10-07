@@ -415,6 +415,32 @@ harness can't make mid-run decisions). Text front-ends: `cli.py` (and
 the two consoles contend for the one sim — prefer the built-in `:ucsim <cmd>`
 passthrough for inspection.
 
+### One engine owner → inputs feed it over an intent channel (not a 2nd console)
+`pyucsim.UCSimEngine` holds **one pty to one ucSim** and is driven strictly
+command-by-command (one write, wait for the prompt; never pipeline after
+run/step). It is **single-owner by design** — pyucsim has no multi-client
+support, and ucSim's `-z` console is a *second console that contends for the one
+sim's stepping*, so two drivers on it fight. Consequence for any live
+co-simulation (e.g. a viewer + a keyboard-teachbox, or later a host-RS232
+driver):
+
+- **Exactly one process owns the engine and does ALL stepping** — in the viz rig
+  that is the **viewer** (`rob3-viz`): its loop steps the firmware (`run_cycles`),
+  applies any queued input, then renders `read_positions()`.
+- **Input drivers do NOT touch ucSim.** They send *intents* over a small
+  viewer-owned socket (our line protocol, above pyucsim): the keyboard-teachbox
+  sends `press R G` / `axis N` / `jog +`; a future **host-RS232 driver** sends
+  `serial <frame>` / `cmd …`. The viewer dispatches each intent by its verb to
+  the right handler (teachbox cadence via `TeachboxDriver`; RS-232 inject later)
+  — one stepper, many intent producers.
+- Why not the `-z` console for this: the debounce cadence (`release; step×3;
+  press; step→0x0C80; step×N; release`) needs *controlled* stepping; a second
+  console free-running / stepping concurrently corrupts it. Keep the stepper
+  single; feed it intents.
+
+So: viewer = sole pyucsim owner + stepper; teachbox / RS-232 = intent producers.
+Do **not** add a second engine or a second `-z` client to "share" the sim.
+
 ## Reading failures (ROB3 quick triage)
 
 - **Banner only / core dump** → the `@` filename bug. Use the `rob3.hex` copy.

@@ -21,7 +21,8 @@ metadata:
 > see `rob3-hardware`. Authoritative live docs:
 > `docs/reverse_engineering_notes.md`, `docs/axis_state_machine.md`,
 > `docs/8031_sfr_map.md`, `docs/8255_mapping.md`, and the annotated listings
-> `firmware/src/*.annotated.asm`. This skill is the fast index; the docs are the
+> `firmware/src/*.asm` (one file per functional region, assembled by
+> `rob3.asm` into a 1:1 image). This skill is the fast index; the docs are the
 > detail.
 
 ## Provenance convention (apply to EVERY firmware claim)
@@ -89,6 +90,12 @@ Register banks: 0 = main (`0x00`), 1 = ISRs INT0/INT1 (`0x08`), 2 = serial ISR
 > Byte-vs-bit reminder: e.g. the init gate `JB 0x22.0` tests **bit 0 of the
 > one-hot axis mask byte 0x22**, not RAM byte 0x22 as a whole.
 
+> **Machine-readable equates:** this whole map + every documented flag bit is
+> mirrored as sdas8051 symbols in `firmware/src/inc/` — `system.inc`
+> is the authoritative IRAM map + the shared 0x20/0x23/0x28 flag bits; the
+> per-subsystem bytes live in `servo.inc` / `teachbox.inc` / `serial.inc` /
+> `program.inc`, SFRs in `sfr.inc`, MOVX windows in `devices.inc`.
+
 ## External MOVX device windows (DPH selects) [HW]
 
 | DPH | Device |
@@ -97,10 +104,19 @@ Register banks: 0 = main (`0x00`), 1 = ISRs INT0/INT1 (`0x08`), 2 = serial ISR
 | `0x50/0x51/0x52/0x53` | 8255 Port A / Port B / Port C / Control |
 | `0x58` | ADC channel-select/START (A8 = ADD-A channel) |
 | `0x59` | ADC converted-data read |
-| `≥0xA0` (A15) | external SRAM (program storage) |
+| `≥0x80` (A15) | external SRAM (program storage); init probes it, base recorded in `0x3E` (=`0x80`), body page `0x3F` (=`0x81`) |
 
 Details and the decode logic are in `rob3-hardware`. Feedback is **analog via
 ADC0808/0809**, EOC → INT1 — *not* a quadrature encoder. [HW]
+
+> **0x58 ≠ program store (don't confuse them).** [BYTE][SIM] Init at `0x0639`
+> *probes* for the SRAM by a complement write/readback at **`0x8000`** (retry at
+> `0xA000`), and records the working page in **`0x3E`=0x80 / `0x3F`=0x81** — so
+> the program store is **0x8000–0x9FFF**. The `MOV DPH,#0x58` at **`0x0678`** is
+> the **ADC** device window (channel-select/START + EOC wait, then the feedback
+> `0x58→0x50` copy), *not* the program base. The `hardware/teachbox/board.md`
+> text claiming the program lives at "5800H–5FFFH" is **stale/incorrect** —
+> that `0x58` is the ADC MOVX window; the real base is probed and is `0x80`.
 
 ## The five subsystems
 
@@ -112,11 +128,27 @@ ADC0808/0809**, EOC → INT1 — *not* a quadrature encoder. [HW]
    regs) — see `rob3-firmware-sim` for why a single-pass sim of it is not
    faithful. [BYTE]/[SIM]
 2. **RS232 binary protocol** (UART ISR `0x0300`, TX helper `0x0541`) — Mode-1
-   8-bit UART, `SCON=0x50`; baud auto-detect or fixed via P3.0. Host command
-   bytes have bit7=1; bit6 = axis/position vs system/program class; low bits =
-   axis 0-5 or `0x07`=all. `0x81` = data-block marker; `0x89–0x8F` = program
-   download; responses framed with `0x03` (ETX). Command decode is partly
-   [INFER].
+   8-bit UART, `SCON=0x50`. **Serial works ONLY on the auto-baud path** (P3.0=1
+   at 0x06A7 → measures the training byte on the raw P3.0 pin, derives TH1,
+   starts TR1, `IE=0x17` with ES); the **fixed-baud strap (P3.0=0) sets IE=0x07
+   (no ES) and never starts Timer 1 — no serial**. Auto-baud accepts a narrow
+   bit-time window (≈≤38400 at 11.0592 MHz; 115200 out of range) and derives
+   **TH1=0xFC**. [BYTE][SIM]
+   Command byte bit fields (dispatch `rx_dispatch` 0x03A9; **verified [SIM]**):
+   **bit7=0 = axis/position class**, bit7=1 = system/program class; within
+   class-0, bit6/bit5/bit4 pick the op and the low 3 bits = axis 0–5 or `7`=all;
+   **bit3 = R (ack request) → 0x23.1**. Confirmed commands (see
+   `hardware/host/command.md`): `0x40–0x45/0x4F` position query, `0x00–0x07/0x0F`
+   set position, `0x70–0x77/0x7F` position+speed (arms motion mask 0x2B),
+   `0x60/0x61/0x62` motor disable/enable/shutdown, `0x63` serial number,
+   **hidden `0x50–0x57` = digital-input read** (0x5E/0x5F/P1). Frames end with
+   **ETX `0x03`** (enforced: `cjne A,#0x03` at 0x03AE). Reset handshake: host
+   sends `0x20` → `0x15` (init-OK, at auto-baud lock 0x0733) or `0xF1`
+   (already-init, idle-timeout 0x0793). **All `0xFx` replies are ACK/status
+   bytes, NOT errors** (0xF3 default ACK, 0xF4 system ACK, 0xF6/0xF2 program
+   status, 0xF7 motion-complete); there is no distinct NAK byte. `0x81` =
+   program-upload block marker (streams to SRAM). See
+   `firmware/src/rs232.asm`.
 3. **Teach-pendant editor** (scanner `0x0C00`, handler `0x0C80`) — scans the 5×5
    matrix (strobe via 8255, read columns on **P1/0x90**), debounces, returns a
    key index; the handler does axis jog, program edit, run/stop, position teach,
@@ -130,12 +162,67 @@ ADC0808/0809**, EOC → INT1 — *not* a quadrature encoder. [HW]
    (loopback module) — see `rob3-firmware-sim`. POS-digit value entry
    (`pos_digit` 0x0D65 / `pos_commit` 0x0D9F) is `[BYTE]` but not yet mapped as a
    black-box key sequence.
-4. **Program interpreter** (`0x0941`) — executes stored motion programs from
-   external SRAM: 8-byte instructions (opcode, 6 axis targets, speed/flags),
-   PC in `0x66:0x67`, end marker `0x83`. Instruction set only partly decoded
-   [INFER].
+   **Program typing (keypad → stored program) — [SIM] verified:** typing an
+   instruction on the keypad DOES store it into the external-SRAM program body.
+   Verified end-to-end in ucSim (teachbox+loopback+adc modules, from the main
+   loop): tapping **`MARK` `0` `ENT`** writes opcode **`0x1F`** to the program
+   body at `0x8100` and advances the program PC (`0x66:0x67`) by one 8-byte slot
+   to `0x8108` — matching the compiler/interpreter encoding. The store path is
+   `kbd_handle`→`0x0DA5` (`mov DPL,0x66 / mov DPH,0x67 / movx @DPTR,A`), opcode
+   staged in `R3`; commit on the `ENT` key.
+   Key matrix (module `set hardware teachbox <row> <group>`, row = 74LS138 `/Y`
+   0..7, group = P1 column 1..3; firmware **index = row+1 + (group−1)×8**):
+   `MARK`=(4,3)=idx0x15, `OUT`=(1,3), `TIM`=(3,3), `POS`=(2,3), `GOTO`=(5,3),
+   `IF`=(6,3), `INS`=(0,3); **`ENT`=(5,2)=idx0x0E** — note this contradicts
+   `board.md`'s "/Y5·grp1" cell (that doc's group column is mislabelled for the
+   ENT/arrow block; the firmware index formula is authoritative).
+   **Entry state:** the keypad store needs the program PC `0x66:0x67` →
+   `0x8100`, page regs `0x3E`=0x80/`0x3F`=0x81, and INPUT mode — normally
+   established by the `STOP 0 ENT` header. **STOP is a soft reset of the
+   editor/entry state, not a CPU reset** (board.md: the STOP/ERR-CLR handler
+   "handles cancellations and resets… clears the transient error registers
+   (0x21), switches off the ERR lamp, resets the entry parsing caches to zero" —
+   it does NOT jump the reset vector 0x0600). `STOP 0 ENT` extends that to clear
+   the program and build a fresh header (manual: "clears memory, initializes for
+   programming"). So seeding PC=0x8100 / pages / INPUT mode directly is a
+   faithful stand-in for the `STOP 0` header (what the keypad tests do). STOP's
+   exact key index (left column, `p3 DB25`, outside the /Y matrix) is still
+   `[INFER]`.
+   **Keypad opcodes verified by typing (fresh-state probe) [SIM]:** `MARK 0 ENT`
+   → stores `0x1F`; `GOTO 0 ENT` → stores **`0x34`** (independent keypad
+   cross-check of the corrected bytecode GOTO opcode); `TIM 0 ENT` → `0x19`
+   (low bit set — the keypad encodes the operand *variant* in the opcode low
+   bits). OUT/POS do not commit until their operands+ENT are entered.
+   **Remaining `[INFER]` (genuinely hard, not yet mapped):** the per-instruction
+   operand-entry → commit state machine — the digit/`.`/sign/ENT key sequences
+   for `TIM t`, `OUT k +/-`, `POS a . n`, `GOTO m . n`, `IF i . m` with real
+   operands (probes with non-zero operands did not commit; chaining multiple
+   typed instructions on one session also needs this editor state machine).
+   Test: `simulator/tests/test_teachbox_typing.py`.
+4. **Program interpreter** — executes stored motion programs from external
+   SRAM. Entry points [BYTE][SIM]: `prog_prepare` **0x0803** (label-table
+   preprocessor: records each `MARK` opcode `0x1F` as a 2-byte PC in the
+   page-0x80 table; validates header/end sentinel `0x83`), `prog_exec`
+   **0x0941** (executor: fetches opcode into `0x27`, decodes with the SAME
+   command bit fields as the RS232 dispatch, most instructions occupy an
+   **8-byte slot**, PC in `0x66:0x67`), `prog_goto` **0x0A33** (label→PC:
+   `rl A`×2 into the page-0x80 table). Opcode `0x1F`=MARK, `0x36`=3-byte instr,
+   bit7=END. **TBPS opcode map [SIM]:** MARK=0x1F, POS-move=`0x60+axis`,
+   POS-store-all=0x07, TIM=0x18 (ops→0x1A/0x1B), OUT=`0x10+(k-1)&3`,
+   **GOTO=0x34** (operand[0]=label), **GOTO-counted=0x36**, **IF=0x32**
+   (op[0]=label, op[1]=input-mask; jump when `(mask & P1)==0`), move+speed=
+   `0x70+axis`/0x7F, END=bit7. The branch handler (0x09F1→L_0A0C) is reached
+   only for op≥0x32 with .5=1,.4=1,.3=0 — so the earlier guesses GOTO=0x30/
+   IF=0x20 were WRONG (they don't branch). Verified in `tools/tbps-compiler`.
+   SRAM layout: page **0x80** = label table (~128 labels) + header/
+   end-marker at 0x80EE.., pages **0x81..0x9F** = program body (~7.9 KB of the
+   8 KB HM6264, nonvolatile). Stored programs reuse the serial command encoding
+   and are the SAME programs the Teachbox creates. Per-opcode operand layout is
+   partly [INFER]. See `firmware/src/program.asm`
+   and the `demo-hello-program` test.
 5. **Motion executor** (`0x08FF`, called from the main loop) — high-level:
-   detects all-axes-done / timeout / I/O conditions, drives program stepping.
+   detects all-axes-done / timeout / I/O conditions, drives program stepping
+   (fetches the next `prog_exec` instruction when the current step completes).
 
 ## Axis / joint reference [HW]
 

@@ -10,6 +10,22 @@ Project-specific pitfalls discovered while reverse-engineering the ROB3 8031
 firmware and simulating it with ucSim. Keep entries short, non-obvious, and
 likely to recur.
 
+## Working method (read first)
+
+### Consult the project before building — reuse, don't reinvent
+Before writing new code or re-deriving a fact, **check what already exists** and
+build on it. Costly re-derivations hit this session that the project already had:
+- The keypad `(row,group)→index` map + debounce cadence is in the
+  **`rob3-firmware-sim` skill** — don't reconstruct it from test files.
+- **pyucsim is single-owner** (one pty, one ucSim, command-by-command) — so one
+  process owns the engine and inputs feed it over an intent channel; don't add a
+  second `-z` console or a second engine to "share" the sim.
+- Equate/opcode values live in `firmware/src/inc/*.inc` (e.g. `tbps_isa.inc`,
+  `host_commands.inc`) and are mirrored/generated (`inc2sh.py`) — reuse the
+  single source of truth, don't hardcode magic literals.
+Order of operations: skills/steering → existing modules/includes → repo docs →
+only then write new code, matching the project's structure and conventions.
+
 ## ucSim / simulation
 
 ### Loading a program into xram: use `set mem xram`, NOT a multi-line `download`
