@@ -42,7 +42,8 @@
         .include "inc/system.inc"       ; IRAM map + shared flags (0x20/0x23/0x28)
         .include "inc/servo.inc"        ; per-axis arrays + servo masks  (ext1_servo.asm)
         .include "inc/teachbox.inc"     ; keypad / editor state          (teachbox.asm)
-        .include "inc/serial.inc"       ; RS-232 workspace + constants   (rs232.asm)
+        .include "inc/serial.inc"       ; RS-232 workspace (RX/TX state + buffers)
+        .include "inc/host_commands.inc" ; ROB3 host command set (keywords/bits/ACKs)
         .include "inc/tbps_isa.inc"     ; TBPS instruction set (shared copy; == compiler's)
         .include "inc/tbps_interpreter.inc"      ; interpreter workspace + routine entries
 

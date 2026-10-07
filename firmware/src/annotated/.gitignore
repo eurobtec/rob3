@@ -1,2 +1,3 @@
 # Assembler/linker build output (make in this directory)
 /_build/
+inc/host_commands.sh

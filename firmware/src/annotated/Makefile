@@ -102,7 +102,7 @@ verify-region: | $(BUILD) ## Verify ONE region: make verify-region REGION=<name>
 	orgd=$$(printf '%d' $$org); lend=$$(printf '%d' $$len); \
 	printf '        .area CODE (ABS)\n' > $(BUILD)/_r_$(REGION).asm; \
 	for i in inc/sfr.inc inc/devices.inc inc/system.inc inc/servo.inc \
-	         inc/teachbox.inc inc/serial.inc inc/tbps_isa.inc inc/tbps_interpreter.inc; do \
+	         inc/teachbox.inc inc/serial.inc inc/host_commands.inc inc/tbps_isa.inc inc/tbps_interpreter.inc; do \
 	  printf '        .include "%s"\n' "$$PWD/$$i" >> $(BUILD)/_r_$(REGION).asm; done; \
 	printf '        .include "%s"\n' "$$PWD/$(REGION).asm" >> $(BUILD)/_r_$(REGION).asm; \
 	if [ "$(REGION)" = "tbps_interpreter" ]; then \

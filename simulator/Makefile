@@ -31,6 +31,14 @@ SIMFLAGS   := -t 51 -X 11.0592M
 # A hex copy with a shell-safe name (the shipped .hex has an '@' in its name)
 SAFEHEX    := $(BUILD)/rob3.hex
 
+# Bash-sourceable host command set, generated from the firmware's .inc (single
+# source of truth) by inc2sh.py — the sim-serial* tests source it.
+HOST_CMD_INC := $(ANNDIR)/inc/host_commands.inc
+HOST_CMD_SH  := $(ANNDIR)/inc/host_commands.sh
+$(HOST_CMD_SH): $(HOST_CMD_INC) $(ANNDIR)/inc2sh.py
+	@python3 $(ANNDIR)/inc2sh.py $(HOST_CMD_INC) -o $(HOST_CMD_SH)
+	@echo "generated $(HOST_CMD_SH) from $(HOST_CMD_INC)"
+
 .PHONY: all verify \
         sim-init sim-run sim-teachbox sim-teachbox-module sim-adc sim-serial \
         sim-serial-autobaud sim-serial-e2e sim-autobaud-sweep sim-issue004-fix sim-ros2-live sim-teleop-ros2 sim-program sim-teachbox-axis demo-teachbox demo-hello-program test clean help
@@ -58,7 +66,7 @@ sim-run: $(SAFEHEX) ## Run init past the ADC/INT1 gate (inject EOC) to main loop
 	@SAFEHEX=$(SAFEHEX) SIM="$(SIM)" SIMFLAGS="$(SIMFLAGS)" \
 		$(SIMDIR)/tests/sim_run.sh
 
-sim-serial: $(SAFEHEX) ## Behavioral: RS-232 protocol dispatch/framing (read/write/ETX/reset-ACK)
+sim-serial: $(SAFEHEX) $(HOST_CMD_SH) ## Behavioral: RS-232 protocol dispatch/framing (read/write/ETX/reset-ACK)
 	@SAFEHEX=$(SAFEHEX) SIM="$(SIM)" SIMFLAGS="$(SIMFLAGS)" \
 		$(SIMDIR)/tests/sim_serial.sh
 
@@ -70,7 +78,7 @@ sim-serial-autobaud: $(SAFEHEX) ## Behavioral: software auto-baud brings UART up
 	@SAFEHEX=$(SAFEHEX) UCSIM_51="$(UCSIM_51)" SIMFLAGS="$(SIMFLAGS)" \
 		$(SIMDIR)/tests/sim_serial_autobaud.sh
 
-sim-serial-e2e: $(SAFEHEX) ## Behavioral: FULL serial RX chain — auto-baud lock -> real byte over -S link -> SBUF/RI -> RX ISR (opt-in; skips w/o loader ucsim_51 + adc/rxd)
+sim-serial-e2e: $(SAFEHEX) $(HOST_CMD_SH) ## Behavioral: FULL serial RX chain — auto-baud lock -> real byte over -S link -> SBUF/RI -> RX ISR (opt-in; skips w/o loader ucsim_51 + adc/rxd)
 	@SAFEHEX=$(SAFEHEX) UCSIM_51="$(UCSIM_51)" SIMFLAGS="$(SIMFLAGS)" \
 		$(SIMDIR)/tests/sim_serial_e2e.sh
 

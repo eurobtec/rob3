@@ -105,7 +105,7 @@ ml_motion_tick:
         mov     SFR_DPH,#DEV_8255_PC ; 75 83 52 DPH -> Port C
         movx    @DPTR,A             ; F0        Port C = 0 (motors off)
         mov     PORTC_SHADOW,A      ; F5 4F     clear shadow
-        mov     R4,#0xF7            ; 7C F7     R4 = 0xF7 status/reply code [INFER]
+        mov     R4,#ACK_MOTION_DONE ; 7C F7     R4 = 0xF7 motion-complete ACK [INFER]
         setb    0x2B                ; D2 2B     set bit 0x25.3 (TX flag) [INFER]
 ml_motion_done:
         clr     0x2F                ; C2 2F     clear 0x25.7 (motion-active done)
@@ -120,7 +120,7 @@ ml_no_serial:
         jnb     0x22,ml_poll_gate   ; 30 22 0A  bit 0x24.2 (RX ready?) -> skip [INFER]
         djnz    SER_TIMEOUT,ml_poll_gate ; D5 18 07  timeout not expired -> skip
         anl     RX_FLAGS,#0xF0      ; 53 24 F0  reset RX state machine low nibble
-        mov     R4,#0xF1            ; 7C F1     R4 = 0xF1 (reset-ACK reply)
+        mov     R4,#ACK_ALREADY     ; 7C F1     R4 = 0xF1 (already-init reset-ACK)
         setb    0x2B                ; D2 2B     set bit 0x25.3 (arm TX)
 
 ;--- check gates, then poll teachbox or run program ---

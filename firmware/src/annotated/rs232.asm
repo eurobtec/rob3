@@ -891,8 +891,8 @@ L_03A3:
 ;==============================================================================
 L_03A9:
         anl RX_FLAGS, #0xC0                     ; 53 24 C0  03A9
-        mov R4, #0xF3                       ; 7C F3  03AC
-        cjne A, #0x03, L_03C1               ; B4 03 10  03AE
+        mov R4, #ACK_DEFAULT                ; 7C F3  03AC  default command ACK
+        cjne A, #CMD_ETX, L_03C1            ; B4 03 10  03AE  frame must end with ETX
         mov A, R6                           ; EE  03B1
         mov R5, A                           ; FD  03B2
         jnb 0xE7, L_03C7                    ; 30 E7 11  03B3
@@ -933,7 +933,7 @@ L_03ED:
         setb 0x2A                           ; D2 2A  03ED
         ajmp 0x0525                         ; A1 25  03EF
 L_03F1:
-        mov R4, #0xF6                       ; 7C F6  03F1
+        mov R4, #ACK_PROG_STATUS            ; 7C F6  03F1  program-operation status
         jnb 0x41, L_03C1                    ; 30 41 CB  03F3
         djnz R6, L_040B                     ; DE 13  03F6
         clr A                               ; E4  03F8
@@ -972,7 +972,7 @@ L_042E:
         lcall 0x0A34                        ; 12 0A 34  0432
         sjmp L_0400                         ; 80 C9  0435
 L_0437:
-        mov R4, #0xF2                       ; 7C F2  0437
+        mov R4, #ACK_STEP_STATUS            ; 7C F2  0437  program single-step status
         djnz R6, L_03C1                     ; DE 86  0439
         lcall 0x0A34                        ; 12 0A 34  043B
         sjmp L_040D                         ; 80 CD  043E
@@ -1133,7 +1133,7 @@ L_0550:
 L_0551:
         clr 0x29                            ; C2 29  0551
 L_0553:
-        mov 0x99, #0x03                     ; 75 99 03  0553
+        mov 0x99, #CMD_ETX                  ; 75 99 03  0553  SBUF = ETX terminator
         ret                                 ; 22  0556
 L_0557:
         jb 0x2E, L_056E                     ; 20 2E 14  0557

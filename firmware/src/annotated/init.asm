@@ -286,7 +286,7 @@ baud_check:
         cpl     A                   ; F4        A = ~(A-1) -> TH1 reload
         mov     SFR_TH1,A           ; F5 8D     TH1 = derived baud reload
         setb    TCON_TR1            ; D2 8E     TR1 = start Timer 1 (baud gen)
-        mov     SFR_SBUF,#0x15      ; 75 99 15  transmit 0x15 (init-OK ACK)
+        mov     SFR_SBUF,#ACK_INIT_OK ; 75 99 15  transmit 0x15 (init-OK ACK)
 baud_wait_tx:
         jnb     0x99,baud_wait_tx   ; 30 99 FD  wait for TI (transmit done)
         clr     0x99                ; C2 99     clear TI

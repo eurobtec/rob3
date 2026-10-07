@@ -32,9 +32,8 @@ CMD_BUF         = 0x68          ; command/response buffer (0x68..0x6E)
 ;------------------------------------------------------------------------------
 ; Protocol constants
 ;------------------------------------------------------------------------------
-ETX             = 0x03          ; frame terminator (cjne A,#0x03 at 0x03AE)
-ACK_INIT_OK     = 0x15          ; init-OK reply (auto-baud lock, 0x0733)
-ACK_ALREADY     = 0xF1          ; already-init reply (idle-timeout, 0x0793)
-ACK_DEFAULT     = 0xF3          ; default command ACK (dispatch default)
+; The command language (frame terminator ETX, startup handshake, command
+; keywords/bit-fields, and the 0xFx status/ACK reply bytes) is defined in
+; inc/host_commands.inc. This file keeps only the serial RX/TX workspace above.
 
 ; End of inc/serial.inc
