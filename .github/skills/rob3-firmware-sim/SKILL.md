@@ -384,6 +384,14 @@ Two verified facts (`[SIM]`, swept in ucSim):
   `kbd_handle` (`0x0C80`) does `DEC A`. **Axis-select** = index `0x02..0x07`
   (group 1, rows 1..6) → axis 0..5, each setting mode `IRAM[0x29]=0x40`
   (POSITION).
+- **Jog keys** `[SIM]` (swept in ucSim): `+` (increment) = **row 4, group 2**
+  (index `0x0D`); `-` (decrement) = **row 3, group 2** (index `0x0C`). After an
+  axis-select, pressing these *through the debounce cadence* steps the selected
+  axis's slot `0x50+N` by ±1, clamped, and is **stable + repeatable** (the
+  firmware arms its own servo handoff). Do NOT jog by jumping `pc 0x0E26` into
+  `kh_jog` with hand-set registers — that bypasses the handoff and after a few
+  calls drives the controller to RESET (all axes → 0, `0x28`→`0x01`). Drive the
+  real keys.
 - **Debounce accept = RELEASE-then-HOLD.** The accept path (`0x0C41`) is gated
   by `JNB 0x20.6`, and flag `0x20.6` is set **only** by the `key_release` path
   (scanner sees no key). So dispatch requires: release (sets `0x20.6`) → press +
