@@ -68,16 +68,32 @@ driven by the live firmware.
 
 - URDF `rob3.urdf` (+ `.xacro`) imported and packaged; `urdf/meshes/` + a README
   document the STL/CAD swap (`<mesh>` refs, mm→m scale) for later CAD.
-- Viewer frontends behind a `Viewer` protocol, `rob3-viz --backend <name>`:
-  - `text` — terminal: per-axis byte, joint value (deg/mm), min..max, ASCII bar.
+- **Viewer frontends** behind a `Viewer` protocol, `rob3-viz --backend <name>`:
+  - `text` — terminal: per-axis byte, joint value (deg/mm), min..max, ASCII bar,
+    redrawn in place (fixed row count) + a status line naming the last action.
   - `pybullet` — 3D URDF window, native orbit camera (`[viz]` extra).
-  - shared `axes.py` byte→joint mapping; loads adc+loopback so the servo runs.
-- `rob3-teachbox` — keyboard input driver using the authoritative keypad mapping
-  + debounce from the `rob3-firmware-sim` skill (`index = row+1+(group-1)*8`;
-  axis-select = group 1 rows 1..6; release→hold→release). Verified vs the ROM:
-  axis-select → POSITION (`0x29=0x40`); jog → `0x50+N` moves (via `kh_jog`).
-  Own-engine or attach-to-shared-ucSim (`--console-port`) modes. Full POS value
-  entry is the documented open follow-up.
+  - shared `axes.py` byte→joint mapping; auto-loads adc+loopback+teachbox so the
+    servo runs and the keypad is drivable. Startup banner shows binary/ROM/
+    modules/`servo LIVE|STATIC`.
+- **Zero-config resolution** (each overridable): ROM via `--hex`/`ROB3_HEX` →
+  default sibling checkout; ucSim via `UCSIM_51` → the sibling plugin-enabled
+  `ucsim_51` (preferred over stock `/usr/bin` which can't `loadhw`); cl_hw
+  modules auto-located. So `rob3-viz --backend text` just works from a checkout.
+- **Single-owner co-sim** (pyucsim is single-owner, now in the skill): the viewer
+  owns the one engine + stepper and exposes an **intent socket** (`--port`,
+  default 5577); input drivers connect and send intent lines. One stepper, many
+  intent producers (teachbox now; host-RS232 later).
+- **`rob3-teachbox`** keyboard input driver: attaches to the viewer by default
+  (`--port`, clear connected/failed messages) or `--own-engine`. Keys: 1–6 select
+  axis 0–5, `+`/`-` jog.
+- **Reverse-engineered the real jog keys** `[SIM]`: `+` = row 4 group 2
+  (index 0x0D), `-` = row 3 group 2 (index 0x0C), swept in ucSim. Jogging via
+  these as real keypresses (debounce cadence) steps `0x50+N` ±1, clamped,
+  **stable + repeatable, no reset**. The earlier `pc 0x0E26`-into-`kh_jog` jump
+  bypassed the servo handoff and reset the controller after ~3 presses — now
+  recorded as an anti-pattern in the `rob3-firmware-sim` skill. Axis-select +
+  jog verified end-to-end over the intent socket. (Full `POS a.n ENT` value
+  entry remains a follow-up.)
 
 ## Housekeeping
 
