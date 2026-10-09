@@ -28,6 +28,31 @@ only then write new code, matching the project's structure and conventions.
 
 ## ucSim / simulation
 
+### USE OUR ucSim build — never `/usr/bin/ucsim_51`, never re-search for it
+The project ships a **plugin-enabled ucSim** and the paths are **already
+documented** — do NOT grep `/usr`, do NOT "find" the binary, do NOT let a tool
+default it. Just use these (recurring mistake: grabbing stock `/usr/bin/ucsim_51`
+0.8.5, which **cannot `loadhw` the cl_hw modules**, so the ADC/teachbox/loopback/
+rxd tests silently can't run):
+
+- **Binary:** `$HOME/github/eurobtec/ucsim/src/sims/s51.src/ucsim_51`
+  (this is what `rob3_ucsim`'s `engine.find_ucsim()` resolves to; override only
+  via the `UCSIM_51` env var).
+- **ROM:** `$HOME/github/eurobtec/rob3/firmware/legacy/hex/M2764A@DIP28.HEX`
+  (or `simulator/build/rob3.hex`, the `@`-safe copy); override via `ROB3_HEX`.
+- **cl_hw modules (built):**
+  `rob3_ucsim/simulator/ucsim-modules/{adc,teachbox,loopback,rxd}/*.so`
+  — pass via `start_session(load_hw=[...])` so they register before first fetch.
+- **Driving the firmware:** prefer the `rob3_ucsim` **`UCSimEngine`** (it already
+  picks our binary, forces `-t 51`, loads the modules, and exposes
+  `read_positions()`/`read_targets()`/`read_ports()`/`set_iram`). Don't hand-roll
+  a session when the engine already does it.
+
+If an MCP `start_session` is used, pass `binary=` our build explicitly — the
+stock `/usr` one traps in EMERGENCY-OFF (no loopback) and never reaches the main
+loop. See the `rob3-firmware-sim` and `ucsim` skills for the full workflow (do
+not copy them here).
+
 ### Loading a program into xram: use `set mem xram`, NOT a multi-line `download`
 To put a TBPS program (or any bytes) into external SRAM for a test, use
 `set mem xram <addr> b0 b1 b2 …` — it sets **multiple bytes in one immediate

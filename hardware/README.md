@@ -108,3 +108,8 @@ reset handshake (`0x20` → `0xF1` reply), and example host commands.
      │   STOP  │    0    │  • NOP  │ ERR CLR │   ENT   │
      └─────────┴─────────┴─────────┴─────────┴─────────┘
 ```
+
+## [Mechanical dimensions](mechanics.md)
+
+Physical dimensions of the arm structure (base plate, box body, …), measured on
+the robot and cross-checked against the TR5 3D CAD.

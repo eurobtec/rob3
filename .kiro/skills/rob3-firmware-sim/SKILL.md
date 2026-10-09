@@ -214,6 +214,27 @@ algorithm** (accumulated per-axis workspace `0x78+` and bank-1 state across
 successive ISR invocations), not the sim plumbing — see
 `simulator/harness/README.md`.
 
+### How the firmware actually MOVES an axis (don't re-derive this)
+To make the ROM servo an axis in sim you drive the **ADC pot feedback**, not the
+position byte. The per-axis IRAM bytes are:
+
+| IRAM     | meaning              | who writes it |
+| :------- | :------------------- | :------------ |
+| `0x40+N` | target (commanded)   | host cmd / teachbox / your test |
+| `0x50+N` | current position     | **firmware**, derived from the ADC feedback — do NOT expect a direct poke to move it |
+| `0x58+N` | feedback (ADC copy)  | firmware, from the ADC read |
+
+The servo ISR compares target vs the **ADC-fed** position and drives the L293
+motor bits (`0x5000` Port A axes 0..3, `0x5200` Port C axes 4..5). So the live
+loop is: set target (`set_iram 0x40+N`) → the motor bits assert → the **`Plant`
+model** (`simulator/harness/gui` / `rob3_ucsim.Plant`) integrates the motor bits
+into a new pot value → push it back via the **`adc` cl_hw** (`push_pot(N,val)` /
+`set hardware adc N 0xVV`) → the position byte follows. **Writing `0x40+N` alone
+does nothing visible** (no error signal, pot never moves) — the recurring
+mistake. For a hands-off demo, the firmware's own teachbox jog + the adc/loopback
+modules close the loop (see `demo-teachbox`); for a scripted test, step the
+`Plant` between `run_cycles` bursts and `push_pot` the result each burst.
+
 ## Python batch harness (`simulator/harness/ucsim.py`)
 
 `UCSimBatch` runs `s51` once per "transaction" and parses `dump`/`Stop at`
